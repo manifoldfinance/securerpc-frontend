@@ -1,13 +1,34 @@
+// @ts-check
+/* eslint sort-keys: error */
+/**
+ * @type {import('nextra-theme-docs').DocsThemeConfig}
+ */
+
 import { useRouter } from 'next/router';
 import { GitHubIcon } from 'nextra/icons';
 import type { DocsThemeConfig } from 'nextra-theme-docs';
-import { useConfig } from 'nextra-theme-docs';
+import { Link, useConfig } from 'nextra-theme-docs'
+
 
 import { Footer } from './components/Footer';
 import { TelegramIcon } from './components/icons';
 import SecureRPCLogo from './public/secure_rpc.svg';
 
 const config: DocsThemeConfig = {
+  banner: {
+    key: '3.0-release',
+    content: (
+      <div className='before:content-["🎉_"]'>
+        Nextra 3.0 is released.{' '}
+        <Link
+          href="https://forums.manifo"
+          className='after:content-["_→"]'
+        >
+          Read more
+        </Link>
+      </div>
+    )
+  },
   logo: (
     <>
       <SecureRPCLogo className="logo" />
@@ -42,6 +63,7 @@ const config: DocsThemeConfig = {
   docsRepositoryBase: 'https://github.com/manifoldfinance/securerpc-site/tree/master/docs',
   sidebar: {
     defaultMenuCollapseLevel: 2,
+    toggleButton: true
   },
   editLink: {
     content: 'Edit this page on GitHub →',
@@ -56,9 +78,9 @@ const config: DocsThemeConfig = {
     prev: true,
     next: true,
   },
-  darkMode: false,
+  darkMode: true,
   nextThemes: {
-    defaultTheme: 'light',
+    defaultTheme: 'dark',
   },
   faviconGlyph: '🔐',
   head: function useHead() {
@@ -70,7 +92,7 @@ const config: DocsThemeConfig = {
     // Building Your Application: Caching | Next.js
     const title = isDefault
       ? 'SecureRPC – Connect to Opportunities'
-      : (config.frontMatter.title ?? 'Documentation') + ' – SecureRPC';
+      : `${config.frontMatter.title ?? 'Documentation'} – SecureRPC`;
 
     // An overview of caching mechanisms in Next.js.
     const description = config.frontMatter.description ?? 'SecureRPC';

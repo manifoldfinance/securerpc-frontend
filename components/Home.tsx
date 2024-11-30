@@ -5,12 +5,21 @@ import { Benchmarks } from '@/components/Benchmarks';
 import { buttonDefaults } from '@/components/ui/button';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-
+import { Globe } from './globe';
 import { CommandLineIcon, CursorArrowRaysIcon, ServerStackIcon, ShieldCheckIcon } from './icons';
+
+const stats = [
+  { id: 1, name: 'Transactions every 24 hours', value: '$44 million' },
+  { id: 2, name: 'Validators Registered', value: '909,802' },
+  { id: 3, name: 'Uptime', value: '99.9999%' },
+]
 
 export function Home() {
   return (
+
+    
     <main className="relative w-full max-w-full">
+      
       <div className="mx-auto mt-4 max-w-[1180px] px-6 md:mt-16">
         <div className="hero-texture mb-6 flex w-full flex-col justify-between gap-8 rounded-lg p-4 text-neutral-950 shadow-sm dark:text-neutral-50 md:flex-row md:p-8">
           <div className="flex max-w-[540px] flex-col items-start space-y-1.5">
@@ -53,8 +62,8 @@ export function Home() {
                     'flex-grow border border-neutral-200/30 text-neutral-900 hover:bg-neutral-100/30 dark:text-neutral-50',
                   ])}
                 >
-                  <Link href="https://github.com/manifoldfinance" target="_blank">
-                    View on GitHub
+                  <Link href="https://forums.manifoldfinance.com" target="_blank">
+                  🌐 Community Forums 
                   </Link>
                 </Slot>
               </div>
