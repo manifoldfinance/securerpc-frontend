@@ -1,0 +1,96 @@
+---
+title: 'Service Metrics'
+description: 'Service Availability Metrics'
+---
+
+import { Callout, FileTree, Steps } from 'nextra/components';
+
+# Understanding Service Availability Metrics
+
+## Time-Based Availability
+
+Time-based availability is traditionally calculated using the formula:
+
+```math
+Availability = Uptime / (Uptime + Downtime)
+```
+
+While this formula seems straightforward, it presents several challenges for modern distributed systems:
+
+1. **Defining Uptime**
+   - In a globally distributed service, "uptime" becomes ambiguous
+   - The service might be up in one region but down in another
+   - Partial system failures can create states that are neither fully up nor down
+   - Different components might have different uptime status
+
+2. **Measuring Downtime**
+   - Determining when a system is truly "down" can be complex
+   - Degraded performance vs. complete outage
+   - Intermittent issues might not qualify as traditional downtime
+   - Impact of maintenance windows and planned outages
+
+## Request-Based (Aggregate) Availability
+
+A more practical approach for modern systems is request-based availability:
+
+```math
+Availability = Successful Requests / Total Requests
+```
+
+### Advantages:
+- Directly measures user experience
+- Accounts for partial system failures
+- Easier to measure and monitor
+- Works across distributed systems
+- Provides real-time insights
+
+### Limitations:
+- Not all requests have equal importance
+  - A failed checkout request is more critical than a failed image load
+  - Long-running requests vs. quick operations
+  - High-priority vs. low-priority operations
+- May not capture all types of degradation
+  - Slow responses that technically succeed
+  - Periodic availability issues
+  - Edge cases and rare conditions
+
+## Best Practices for Measuring Availability
+
+To get a complete picture of system availability, consider:
+
+1. **Weighted Request Availability**
+   ```
+   Availability = (Successful Requests × Weight) / (Total Requests × Weight)
+   ```
+   Where weight is based on request importance or business impact
+
+2. **Service Level Indicators (SLIs)**
+   - Response time thresholds
+   - Error rates by request type
+   - Regional availability metrics
+   - Component-specific availability
+
+3. **Multiple Time Windows**
+   - Monthly availability
+   - Rolling 30-day window
+   - Peak usage periods
+   - Business-critical hours
+
+
+
+## Minimal cumulative ratio
+
+In summary, count-based (success-ratio) availability metrics:
+
+• are not meaningful in that they are not based on time.
+• are biased by highly active users.
+• are biased because of different client behavior during
+outages.
+
+To make availability information actionable, we want to be able to distinguish between outages of different durations (e.g. one user outage of 1000 minutes, vs 1000 outages of 1 minute). In general, the bigger the window you examine availability over, the better the availability figure looks. To address this, _windowed_ user-uptime combines information from all timescales (window sizes) simultaneously. For a given window size _w_, availability is computed by enumerating all windows of size _w_, computing the availability of each, and then taking the lowest value. Taken together the results are called the _minimal cumulative ratio_ or MCR.
+
+For window size w:
+
+- Enumerate all possible windows of size w
+- Compute availability for each window
+- Take the lowest (worst) value

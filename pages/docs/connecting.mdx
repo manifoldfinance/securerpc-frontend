@@ -1,0 +1,65 @@
+---
+title: 'Connecting to SecureRPC'
+description: 'A guide for validators, users, and developers to connect to SecureRPC'
+---
+
+import { Callout } from 'nextra/components';
+
+# Connecting to SecureRPC
+
+<Callout type="info">⇲ API Keys are not required for normal users.</Callout>
+
+### Users
+
+```bash copy
+https://api.securerpc.com/v1
+```
+
+## Validators
+
+```bash copy
+https://mainnet-relay.securerpc.com
+```
+
+### Networks
+
+> **Note**
+>
+> Homestead is Ethereum Mainnet, Holesky is a Test network
+
+| name      | chain_id | stats                                                                | endpoint                                                                                                                                                                                                                                                                   |
+| --------- | -------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| homestead | 1        | [mainnet-relay.securerpc.com/](https://mainnet-relay.securerpc.com/) | [0x98650451ba02064f7b000f5768cf0cf4d4e492317d82871bdc87ef841a0743f69f0f1eea11168503240ac35d101c9135@mainnet-relay.securerpc.com/](https://0x98650451ba02064f7b000f5768cf0cf4d4e492317d82871bdc87ef841a0743f69f0f1eea11168503240ac35d101c9135@mainnet-relay.securerpc.com/) |
+| holesky   | 17000    | [holesky-relay.securerpc.com](https://holesky-relay.securerpc.com)   | [0x94392909bb5b7875ed990c17757ea1602e05e076161e9fc7235a33587ce7ebbe1cc52f0ae3ea28139a7c4b8608dd44d3@holesky-relay.securerpc.com](https://0x94392909bb5b7875ed990c17757ea1602e05e076161e9fc7235a33587ce7ebbe1cc52f0ae3ea28139a7c4b8608dd44d3@holesky-relay.securerpc.com)   |
+
+## Peering
+
+For developers interested in co-location we can offer the following:
+
+- Publicly routable address space (at least one /24)
+- 24x7 NOC contact capable of resolving technical/routing issues (response time t.b.d.).
+- Presence at one or more of the datacenter/peering interconnection facilities listed (primarily
+  OVHCloud).
+
+## Relay Identity
+
+| key                            | value                                                                                              |
+| ------------------------------ | -------------------------------------------------------------------------------------------------- |
+| Relay Pubkey                   | 0x98650451ba02064f7b000f5768cf0cf4d4e492317d82871bdc87ef841a0743f69f0f1eea11168503240ac35d101c9135 |
+| Bellatrix fork version         | 0x02000000                                                                                         |
+| Genesis fork version           | 0x00000000                                                                                         |
+| Genesis validators root        | 0x4b363db94e286120d76eb905340fdd4e54bfe9f06bf33ff6cf5ad27f511bfe95                                 |
+| Builder signing domain         | 0x00000001f5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a9                                 |
+| Beacon proposer signing domain | 0x000000004a26c58b08add8089b75caa540848881a8d4f0af0be83417a85c0f45                                 |
+
+## API Endpoints
+
+| **RPC**                      | **Endpoint**                                                                                |
+| ---------------------------- | ------------------------------------------------------------------------------------------- |
+| Status                       | `/eth/v1/builder/status`                                                                    |
+| RegisterValidator            | `/eth/v1/builder/validators`                                                                |
+| GetHeader                    | `/eth/v1/builder/header/{slot:[0-9]+}/{parent_hash:0x[a-fA-F0-9]+}/{pubkey:0x[a-fA-F0-9]+}` |
+| GetPayload                   | `/eth/v1/builder/blinded_blocks`                                                            |
+| DataProposerPayloadDelivered | `/relay/v1/data/bidtraces/proposer_payload_delivered`                                       |
+| DataBuilderBidsReceived      | `/relay/v1/data/bidtraces/builder_blocks_received`                                          |
+| DataValidatorRegistration    | `/relay/v1/data/validator_registration`                                                     |

@@ -1,0 +1,1866 @@
+---
+title: 'Relay API Specification'
+description: 'API specification v1.2.0'
+---
+
+import { Callout, Steps, Tabs } from 'nextra/components';
+
+### Validator Registration
+
+`POST /validator-registration`
+
+_Create a new validator registration_
+
+> Body parameter
+
+```json
+{
+  "fee_recipient": 2.247599596049063e43,
+  "gas_limit": 100,
+  "timestamp": 1620000000,
+  "pubkey": 6.059516523859205e110
+}
+```
+
+<h3 id="post__validator-registration-parameters">Parameters</h3>
+
+| Name | In   | Type                                                  | Required | Description |
+| ---- | ---- | ----------------------------------------------------- | -------- | ----------- |
+| body | body | [ValidatorRegistration](#schemavalidatorregistration) | true     | none        |
+
+> Example responses
+
+> 200 Response
+
+```json
+{
+  "code": 200,
+  "message": "Success"
+}
+```
+
+<h3 id="post__validator-registration-responses">Responses</h3>
+
+| Status | Meaning                                                 | Description         | Schema                            |
+| ------ | ------------------------------------------------------- | ------------------- | --------------------------------- |
+| 200    | [OK](https://tools.ietf.org/html/rfc7231#section-6.3.1) | Successful response | [APIResponse](#schemaapiresponse) |
+
+<aside class="success">This operation does not require authentication</aside>
+
+### post\_\_signed-validator-registration
+
+`POST /signed-validator-registration`
+
+_Create a new signed validator registration_
+
+> Body parameter
+
+```json
+{
+  "message": {
+    "fee_recipient": 2.247599596049063e43,
+    "gas_limit": 100,
+    "timestamp": 1620000000,
+    "pubkey": 6.059516523859205e110
+  },
+  "signature": 5.845012751651466e230
+}
+```
+
+<h3 id="post__signed-validator-registration-parameters">Parameters</h3>
+
+| Name | In   | Type                                                              | Required | Description |
+| ---- | ---- | ----------------------------------------------------------------- | -------- | ----------- |
+| body | body | [SignedValidatorRegistration](#schemasignedvalidatorregistration) | true     | none        |
+
+> Example responses
+
+> 200 Response
+
+```json
+{
+  "code": 200,
+  "message": "Success"
+}
+```
+
+<h3 id="post__signed-validator-registration-responses">Responses</h3>
+
+| Status | Meaning                                                 | Description         | Schema                            |
+| ------ | ------------------------------------------------------- | ------------------- | --------------------------------- |
+| 200    | [OK](https://tools.ietf.org/html/rfc7231#section-6.3.1) | Successful response | [APIResponse](#schemaapiresponse) |
+
+<aside class="success">This operation does not require authentication</aside>
+
+<h1 id="relay-api-builder">Builder</h1>
+
+Set of endpoints to interact with an external block builder.
+
+### getValidators
+
+<a id="opIdgetValidators"></a>
+
+`GET /validators`
+
+\*Get a list of validator registrations for validators scheduled to propose in the current and next
+epoch.
+
+-
+
+- Used by builders to know when to submit bids for an upcoming proposal.
+
+- Returns an array of validator registrations for the current and next epoch.
+
+- Each entry includes a slot and the validator with assigned duty.
+
+- Slots without a registered validator are omitted.
+
+> Example responses
+
+> 200 Response
+
+```json
+[
+  {
+    "slot": "1",
+    "validator_index": "1",
+    "entry": {
+      "message": {
+        "fee_recipient": 9.808660505397017e47,
+        "gas_limit": "1",
+        "timestamp": "1",
+        "pubkey": 2.264731349119913e115
+      },
+      "signature": 1.6617440412512548e230
+    }
+  }
+]
+```
+
+<h3 id="getvalidators-responses">Responses</h3>
+
+| Status | Meaning                                                 | Description       | Schema |
+| ------ | ------------------------------------------------------- | ----------------- | ------ |
+| 200    | [OK](https://tools.ietf.org/html/rfc7231#section-6.3.1) | Success response. | Inline |
+
+<h3 id="getvalidators-responseschema">Response Schema</h3>
+
+Status Code **200**
+
+| Name              | Type                                                        | Required | Restrictions | Description                                                                  |
+| ----------------- | ----------------------------------------------------------- | -------- | ------------ | ---------------------------------------------------------------------------- |
+| _anonymous_       | [[inline_response_200](#schemainline_response_200)]         | false    | none         | none                                                                         |
+| » slot            | string                                                      | false    | none         | none                                                                         |
+| » validator_index | string                                                      | false    | none         | none                                                                         |
+| » entry           | [validators_entry](#schemavalidators_entry)                 | false    | none         | The `SignedValidatorRegistration` object from the Builder API specification. |
+| »» message        | [validators_entry_message](#schemavalidators_entry_message) | false    | none         | The `ValidatorRegistration` object from the Builder API specification.       |
+| »»» fee_recipient | string(hex)                                                 | false    | none         | Address to receive fees from the block.                                      |
+| »»» gas_limit     | string                                                      | false    | none         | Preferred gas limit of validator.                                            |
+| »»» timestamp     | string                                                      | false    | none         | Unix timestamp of registration.                                              |
+| »»» pubkey        | string(hex)                                                 | false    | none         | BLS public key of validator.                                                 |
+| »» signature      | string(hex)                                                 | false    | none         | none                                                                         |
+
+<aside class="success">This operation does not require authentication</aside>
+
+### submitBlock
+
+<a id="opIdsubmitBlock"></a>
+
+`POST /builder_blocks`
+
+_Submit a new block to the relay._
+
+- Blocks can be submitted as JSON or SSZ, and optionally GZIP encoded. To be clear, there are four
+  options: JSON, JSON+GZIP, SSZ, SSZ+GZIP. If JSON, the content type should be `application/json`.
+  If SSZ, the content type should be `application/octet-stream`.
+
+- To enable GZIP compression for the request body, the HTTP content encoding should be `gzip`.
+  Compression is optional.
+
+- The relay will simulate the block to verify properties and proposer payment in the payment
+  transaction from builder to proposer `fee_recipient` at the end of block.
+
+- For accountability, builder signature is over the SSZ encoded `message`.
+
+- The `message`, which does not include the transactions, will be made public via the data API,
+  allowing anyone to verify the builder signature.
+
+- Any new submission by a builder will overwrite a previous one by the same `builder_pubkey`, even
+  if it is less profitable.
+
+> Body parameter
+
+```json
+{
+  "message": {
+    "slot": "1",
+    "parent_hash": 9.387974378126018e76,
+    "block_hash": 9.387974378126018e76,
+    "builder_pubkey": 2.264731349119913e115,
+    "proposer_fee_recipient": 9.808660505397017e47,
+    "gas_limit": "1",
+    "gas_used": "1",
+    "value": "1"
+  },
+  "execution_payload": {
+    "parent_hash": 9.387974378126018e76,
+    "fee_recipient": 9.808660505397017e47,
+    "state_root": 9.387974378126018e76,
+    "receipts_root": 9.387974378126018e76,
+    "logs_bloom": 0,
+    "prev_randao": 9.387974378126018e76,
+    "block_number": "1",
+    "gas_limit": "1",
+    "gas_used": "1",
+    "timestamp": "1",
+    "extra_data": 9.387974378126018e76,
+    "base_fee_per_gas": "1",
+    "block_hash": 9.387974378126018e76,
+    "transactions": [1.8972227216345134e294]
+  },
+  "signature": 1.6617440412512548e230
+}
+```
+
+```yaml
+message:
+  slot: '1'
+  parent_hash: 9.387974378126018e+76
+  block_hash: 9.387974378126018e+76
+  builder_pubkey: 2.264731349119913e+115
+  proposer_fee_recipient: 9.808660505397017e+47
+  gas_limit: '1'
+  gas_used: '1'
+  value: '1'
+execution_payload:
+  parent_hash: 9.387974378126018e+76
+  fee_recipient: 9.808660505397017e+47
+  state_root: 9.387974378126018e+76
+  receipts_root: 9.387974378126018e+76
+  logs_bloom: 0
+  prev_randao: 9.387974378126018e+76
+  block_number: '1'
+  gas_limit: '1'
+  gas_used: '1'
+  timestamp: '1'
+  extra_data: 9.387974378126018e+76
+  base_fee_per_gas: '1'
+  block_hash: 9.387974378126018e+76
+  transactions:
+    - 1.8972227216345134e+294
+signature: 1.6617440412512548e+230
+```
+
+<h3 id="submitblock-parameters">Parameters</h3>
+
+| Name          | In    | Type                                              | Required | Description                              |
+| ------------- | ----- | ------------------------------------------------- | -------- | ---------------------------------------- |
+| cancellations | query | string                                            | false    | If set to 1, opt into bid cancellations. |
+| body          | body  | [builder_blocks_body](#schemabuilder_blocks_body) | true     | A signed bid with an execution payload.  |
+
+> Example responses
+
+> 400 Response
+
+```json
+{
+  "code": 400,
+  "message": "payload for this slot was already delivered",
+  "stacktraces": ["string"]
+}
+```
+
+> 500 Response
+
+```json
+{
+  "code": 500,
+  "message": "internal server error"
+}
+```
+
+<h3 id="submitblock-responses">Responses</h3>
+
+| Status | Meaning                                                                    | Description                     | Schema                                            |
+| ------ | -------------------------------------------------------------------------- | ------------------------------- | ------------------------------------------------- |
+| 200    | [OK](https://tools.ietf.org/html/rfc7231#section-6.3.1)                    | Success response.               | None                                              |
+| 400    | [Bad Request](https://tools.ietf.org/html/rfc7231#section-6.5.1)           | Error response.                 | [inline_response_400](#schemainline_response_400) |
+| 500    | [Internal Server Error](https://tools.ietf.org/html/rfc7231#section-6.6.1) | An internal error on the relay. | [inline_response_500](#schemainline_response_500) |
+
+<aside class="success">This operation does not require authentication</aside>
+
+<h1 id="relay-api-data">Data</h1>
+
+Set of endpoints to provide data about the relay.
+
+### getDeliveredPayloads
+
+<a id="opIdgetDeliveredPayloads"></a>
+
+`GET /proposer_payload_delivered`
+
+_Get payloads that were delivered to proposers._
+
+- Payloads become available after the relay responds to a `getPayload` request from the proposer.
+
+- Query arguments are used as filters.
+
+<h3 id="getdeliveredpayloads-parameters">Parameters</h3>
+
+| Name            | In    | Type        | Required | Description                           |
+| --------------- | ----- | ----------- | -------- | ------------------------------------- |
+| slot            | query | string      | false    | A specific slot.                      |
+| cursor          | query | string      | false    | A starting slot for multiple results. |
+| limit           | query | string      | false    | The number of results.                |
+| block_hash      | query | string(hex) | false    | A specific block hash.                |
+| block_number    | query | string      | false    | A specific block number.              |
+| proposer_pubkey | query | string(hex) | false    | A specific proposer public key.       |
+| builder_pubkey  | query | string(hex) | false    | A specific builder public key.        |
+| order_by        | query | string      | false    | Sort results in order of...           |
+
+##### Enumerated Values
+
+| Parameter | Value  |
+| --------- | ------ |
+| order_by  | -value |
+| order_by  | value  |
+
+> Example responses
+
+> 200 Response
+
+```json
+[
+  {
+    "slot": "1",
+    "parent_hash": 9.387974378126018e76,
+    "block_hash": 9.387974378126018e76,
+    "builder_pubkey": 2.264731349119913e115,
+    "proposer_pubkey": 2.264731349119913e115,
+    "proposer_fee_recipient": 9.808660505397017e47,
+    "gas_limit": "1",
+    "gas_used": "1",
+    "value": "1",
+    "block_number": "1",
+    "num_tx": "1"
+  }
+]
+```
+
+> 500 Response
+
+```json
+{
+  "code": 500,
+  "message": "internal server error"
+}
+```
+
+<h3 id="getdeliveredpayloads-responses">Responses</h3>
+
+| Status | Meaning                                                                    | Description                     | Schema                                                |
+| ------ | -------------------------------------------------------------------------- | ------------------------------- | ----------------------------------------------------- |
+| 200    | [OK](https://tools.ietf.org/html/rfc7231#section-6.3.1)                    | Success response.               | Inline                                                |
+| 400    | [Bad Request](https://tools.ietf.org/html/rfc7231#section-6.5.1)           | Error response.                 | [inline_response_400_1](#schemainline_response_400_1) |
+| 500    | [Internal Server Error](https://tools.ietf.org/html/rfc7231#section-6.6.1) | An internal error on the relay. | [inline_response_500](#schemainline_response_500)     |
+
+<h3 id="getdeliveredpayloads-responseschema">Response Schema</h3>
+
+<aside class="success">This operation does not require authentication</aside>
+
+### getReceivedBids
+
+<a id="opIdgetReceivedBids"></a>
+
+`GET /builder_blocks_received`
+
+_Get builder bid submissions._
+
+- Returns a list of builder bids without execution payloads.
+
+- Only submissions that were successfully verified.
+
+<h3 id="getreceivedbids-parameters">Parameters</h3>
+
+| Name           | In    | Type        | Required | Description                    |
+| -------------- | ----- | ----------- | -------- | ------------------------------ |
+| slot           | query | string      | false    | A specific slot.               |
+| block_hash     | query | string(hex) | false    | A specific block hash.         |
+| block_number   | query | string      | false    | A specific block number.       |
+| builder_pubkey | query | string(hex) | false    | A specific builder public key. |
+| limit          | query | string      | false    | The number of results.         |
+
+> Example responses
+
+> 200 Response
+
+```json
+[
+  {
+    "slot": "1",
+    "parent_hash": 9.387974378126018e76,
+    "block_hash": 9.387974378126018e76,
+    "builder_pubkey": 2.264731349119913e115,
+    "proposer_pubkey": 2.264731349119913e115,
+    "proposer_fee_recipient": 9.808660505397017e47,
+    "gas_limit": "1",
+    "gas_used": "1",
+    "value": "1",
+    "block_number": "1",
+    "num_tx": "1",
+    "timestamp": "1",
+    "timestamp_ms": "1"
+  }
+]
+```
+
+> 500 Response
+
+```json
+{
+  "code": 500,
+  "message": "internal server error"
+}
+```
+
+<h3 id="getreceivedbids-responses">Responses</h3>
+
+| Status | Meaning                                                                    | Description                     | Schema                                                |
+| ------ | -------------------------------------------------------------------------- | ------------------------------- | ----------------------------------------------------- |
+| 200    | [OK](https://tools.ietf.org/html/rfc7231#section-6.3.1)                    | Success response.               | Inline                                                |
+| 400    | [Bad Request](https://tools.ietf.org/html/rfc7231#section-6.5.1)           | Error response.                 | [inline_response_400_2](#schemainline_response_400_2) |
+| 500    | [Internal Server Error](https://tools.ietf.org/html/rfc7231#section-6.6.1) | An internal error on the relay. | [inline_response_500](#schemainline_response_500)     |
+
+<h3 id="getreceivedbids-responseschema">Response Schema</h3>
+
+<aside class="success">This operation does not require authentication</aside>
+
+### getValidatorRegistration
+
+<a id="opIdgetValidatorRegistration"></a>
+
+`GET /validator_registration`
+
+_Check that a validator is registered with the relay._
+
+- Returns the latest validator registration for a given pubkey.
+
+- Useful to check whether your own registration was successful.
+
+<h3 id="getvalidatorregistration-parameters">Parameters</h3>
+
+| Name   | In    | Type        | Required | Description                 |
+| ------ | ----- | ----------- | -------- | --------------------------- |
+| pubkey | query | string(hex) | true     | The validator's public key. |
+
+> Example responses
+
+> 200 Response
+
+```json
+{
+  "message": {
+    "fee_recipient": 9.808660505397017e47,
+    "gas_limit": "1",
+    "timestamp": "1",
+    "pubkey": 2.264731349119913e115
+  },
+  "signature": 1.6617440412512548e230
+}
+```
+
+> 500 Response
+
+```json
+{
+  "code": 500,
+  "message": "internal server error"
+}
+```
+
+<h3 id="getvalidatorregistration-responses">Responses</h3>
+
+| Status | Meaning                                                                    | Description                     | Schema                                                |
+| ------ | -------------------------------------------------------------------------- | ------------------------------- | ----------------------------------------------------- |
+| 200    | [OK](https://tools.ietf.org/html/rfc7231#section-6.3.1)                    | Success response.               | [inline_response_200_1](#schemainline_response_200_1) |
+| 400    | [Bad Request](https://tools.ietf.org/html/rfc7231#section-6.5.1)           | Error response.                 | [inline_response_400_3](#schemainline_response_400_3) |
+| 500    | [Internal Server Error](https://tools.ietf.org/html/rfc7231#section-6.6.1) | An internal error on the relay. | [inline_response_500](#schemainline_response_500)     |
+
+<aside class="success">This operation does not require authentication</aside>
+
+<h1 id="relay-api-validators">Validators</h1>
+
+### getBuilders
+
+<a id="opIdgetBuilders"></a>
+
+`GET /check_registration`
+
+_Finds Validators by status_
+
+Used by builders to know when to submit bids for an upcoming proposal. Get a list
+
+<h3 id="getbuilders-parameters">Parameters</h3>
+
+| Name   | In    | Type   | Required | Description                                         |
+| ------ | ----- | ------ | -------- | --------------------------------------------------- |
+| status | query | string | false    | Status values that need to be considered for filter |
+
+##### Enumerated Values
+
+| Parameter | Value     |
+| --------- | --------- |
+| status    | available |
+| status    | pending   |
+| status    | sold      |
+
+> Example responses
+
+> 200 Response
+
+```json
+"string"
+```
+
+<h3 id="getbuilders-responses">Responses</h3>
+
+| Status | Meaning                                                          | Description                        | Schema |
+| ------ | ---------------------------------------------------------------- | ---------------------------------- | ------ |
+| 200    | [OK](https://tools.ietf.org/html/rfc7231#section-6.3.1)          | successful operation               | string |
+| 400    | [Bad Request](https://tools.ietf.org/html/rfc7231#section-6.5.1) | Invalid username/password supplied | None   |
+
+#### Response Headers
+
+| Status | Header          | Type    | Format    | Description                        |
+| ------ | --------------- | ------- | --------- | ---------------------------------- |
+| 200    | X-Rate-Limit    | integer | int32     | calls per hour allowed by the user |
+| 200    | X-Expires-After | string  | date-time | date in UTC when token expires     |
+
+<aside class="success">This operation does not require authentication</aside>
+
+<h1 id="relay-api-auctions">Auctions</h1>
+
+### getAuctions
+
+<a id="opIdgetAuctions"></a>
+
+`GET /check_auction`
+
+_Finds Validators by status_
+
+Used by builders to know when to submit bids for an upcoming proposal. Get a list
+
+<h3 id="getauctions-parameters">Parameters</h3>
+
+| Name   | In    | Type   | Required | Description                                         |
+| ------ | ----- | ------ | -------- | --------------------------------------------------- |
+| status | query | string | false    | Status values that need to be considered for filter |
+
+##### Enumerated Values
+
+| Parameter | Value     |
+| --------- | --------- |
+| status    | available |
+| status    | pending   |
+| status    | sold      |
+
+> Example responses
+
+> 200 Response
+
+```json
+"string"
+```
+
+<h3 id="getauctions-responses">Responses</h3>
+
+| Status | Meaning                                                          | Description                        | Schema |
+| ------ | ---------------------------------------------------------------- | ---------------------------------- | ------ |
+| 200    | [OK](https://tools.ietf.org/html/rfc7231#section-6.3.1)          | successful operation               | string |
+| 400    | [Bad Request](https://tools.ietf.org/html/rfc7231#section-6.5.1) | Invalid username/password supplied | None   |
+
+#### Response Headers
+
+| Status | Header          | Type    | Format    | Description                        |
+| ------ | --------------- | ------- | --------- | ---------------------------------- |
+| 200    | X-Rate-Limit    | integer | int32     | calls per hour allowed by the user |
+| 200    | X-Expires-After | string  | date-time | date in UTC when token expires     |
+
+<aside class="success">This operation does not require authentication</aside>
+
+### getBidTraces
+
+<a id="opIdgetBidTraces"></a>
+
+`GET /bid_traces`
+
+_Finds Validators by status_
+
+Used by builders to know when to submit bids for an upcoming proposal. Get a list
+
+<h3 id="getbidtraces-parameters">Parameters</h3>
+
+| Name   | In    | Type   | Required | Description                                         |
+| ------ | ----- | ------ | -------- | --------------------------------------------------- |
+| status | query | string | false    | Status values that need to be considered for filter |
+
+##### Enumerated Values
+
+| Parameter | Value     |
+| --------- | --------- |
+| status    | available |
+| status    | pending   |
+| status    | sold      |
+
+> Example responses
+
+> 200 Response
+
+```json
+"string"
+```
+
+<h3 id="getbidtraces-responses">Responses</h3>
+
+| Status | Meaning                                                          | Description                        | Schema |
+| ------ | ---------------------------------------------------------------- | ---------------------------------- | ------ |
+| 200    | [OK](https://tools.ietf.org/html/rfc7231#section-6.3.1)          | successful operation               | string |
+| 400    | [Bad Request](https://tools.ietf.org/html/rfc7231#section-6.5.1) | Invalid username/password supplied | None   |
+
+#### Response Headers
+
+| Status | Header          | Type    | Format    | Description                        |
+| ------ | --------------- | ------- | --------- | ---------------------------------- |
+| 200    | X-Rate-Limit    | integer | int32     | calls per hour allowed by the user |
+| 200    | X-Expires-After | string  | date-time | date in UTC when token expires     |
+
+<aside class="success">This operation does not require authentication</aside>
+
+### getAuctionConfig
+
+<a id="opIdgetAuctionConfig"></a>
+
+`GET /auction_config`
+
+_Get Auction Configuration_
+
+Used by builders to know auction config information like upcoming proposal.
+
+<h3 id="getauctionconfig-parameters">Parameters</h3>
+
+| Name   | In    | Type   | Required | Description                                         |
+| ------ | ----- | ------ | -------- | --------------------------------------------------- |
+| status | query | string | false    | Status values that need to be considered for filter |
+
+##### Enumerated Values
+
+| Parameter | Value     |
+| --------- | --------- |
+| status    | available |
+| status    | pending   |
+| status    | sold      |
+
+> Example responses
+
+> 200 Response
+
+```json
+"string"
+```
+
+<h3 id="getauctionconfig-responses">Responses</h3>
+
+| Status | Meaning                                                          | Description                        | Schema |
+| ------ | ---------------------------------------------------------------- | ---------------------------------- | ------ |
+| 200    | [OK](https://tools.ietf.org/html/rfc7231#section-6.3.1)          | successful operation               | string |
+| 400    | [Bad Request](https://tools.ietf.org/html/rfc7231#section-6.5.1) | Invalid username/password supplied | None   |
+
+#### Response Headers
+
+| Status | Header          | Type    | Format    | Description                        |
+| ------ | --------------- | ------- | --------- | ---------------------------------- |
+| 200    | X-Rate-Limit    | integer | int32     | calls per hour allowed by the user |
+| 200    | X-Expires-After | string  | date-time | date in UTC when token expires     |
+
+<aside class="success">This operation does not require authentication</aside>
+
+## Schemas
+
+<h2 id="tocS_ValidatorRegistration">ValidatorRegistration</h2>
+<a id="schemavalidatorregistration"></a>
+<a id="schema_ValidatorRegistration"></a>
+<a id="tocSvalidatorregistration"></a>
+<a id="tocsvalidatorregistration"></a>
+
+```json
+{
+  "fee_recipient": 2.247599596049063e43,
+  "gas_limit": 100,
+  "timestamp": 1620000000,
+  "pubkey": 6.059516523859205e110
+}
+```
+
+#### Properties
+
+| Name          | Type    | Required | Restrictions | Description                                  |
+| ------------- | ------- | -------- | ------------ | -------------------------------------------- |
+| fee_recipient | string  | false    | none         | Ethereum address of the fee recipient        |
+| gas_limit     | integer | false    | none         | Gas limit for the validator registration     |
+| timestamp     | integer | false    | none         | Unix timestamp of the validator registration |
+| pubkey        | string  | false    | none         | Public key of the validator                  |
+
+<h2 id="tocS_SignedValidatorRegistration">SignedValidatorRegistration</h2>
+
+<a id="schemasignedvalidatorregistration"></a>
+<a id="schema_SignedValidatorRegistration"></a>
+<a id="tocSsignedvalidatorregistration"></a>
+<a id="tocssignedvalidatorregistration"></a>
+
+```json
+{
+  "message": {
+    "fee_recipient": 2.247599596049063e43,
+    "gas_limit": 100,
+    "timestamp": 1620000000,
+    "pubkey": 6.059516523859205e110
+  },
+  "signature": 5.845012751651466e230
+}
+```
+
+#### Properties
+
+| Name      | Type                                                  | Required | Restrictions | Description                             |
+| --------- | ----------------------------------------------------- | -------- | ------------ | --------------------------------------- |
+| message   | [ValidatorRegistration](#schemavalidatorregistration) | false    | none         | none                                    |
+| signature | string                                                | false    | none         | Signature of the validator registration |
+
+<h2 id="tocS_APIResponse">APIResponse</h2>
+
+<a id="schemaapiresponse"></a>
+<a id="schema_APIResponse"></a>
+<a id="tocSapiresponse"></a>
+<a id="tocsapiresponse"></a>
+
+```json
+{
+  "code": 200,
+  "message": "Success"
+}
+```
+
+#### Properties
+
+| Name    | Type    | Required | Restrictions | Description          |
+| ------- | ------- | -------- | ------------ | -------------------- |
+| code    | integer | false    | none         | Response status code |
+| message | string  | false    | none         | Response message     |
+
+<h2 id="tocS_Uint64">Uint64</h2>
+
+<a id="schemauint64"></a>
+<a id="schema_Uint64"></a>
+<a id="tocSuint64"></a>
+<a id="tocsuint64"></a>
+
+```json
+"1"
+```
+
+#### Properties
+
+| Name        | Type   | Required | Restrictions | Description |
+| ----------- | ------ | -------- | ------------ | ----------- |
+| _anonymous_ | string | false    | none         | none        |
+
+<h2 id="tocS_Root">Root</h2>
+
+<a id="schemaroot"></a>
+<a id="schema_Root"></a>
+<a id="tocSroot"></a>
+<a id="tocsroot"></a>
+
+```json
+9.387974378126018e76
+```
+
+#### Properties
+
+| Name        | Type        | Required | Restrictions | Description |
+| ----------- | ----------- | -------- | ------------ | ----------- |
+| _anonymous_ | string(hex) | false    | none         | none        |
+
+<h2 id="tocS_Pubkey">Pubkey</h2>
+
+<a id="schemapubkey"></a>
+<a id="schema_Pubkey"></a>
+<a id="tocSpubkey"></a>
+<a id="tocspubkey"></a>
+
+```json
+2.264731349119913e115
+```
+
+The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix,
+case insensitive._
+
+#### Properties
+
+| Name        | Type        | Required | Restrictions | Description                                                                                                          |
+| ----------- | ----------- | -------- | ------------ | -------------------------------------------------------------------------------------------------------------------- |
+| _anonymous_ | string(hex) | false    | none         | The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._ |
+
+<h2 id="tocS_ErrorMessage">ErrorMessage</h2>
+
+<a id="schemaerrormessage"></a>
+<a id="schema_ErrorMessage"></a>
+<a id="tocSerrormessage"></a>
+<a id="tocserrormessage"></a>
+
+```json
+{
+  "code": 404,
+  "message": "string",
+  "stacktraces": ["string"]
+}
+```
+
+#### Properties
+
+| Name        | Type     | Required | Restrictions | Description                                                               |
+| ----------- | -------- | -------- | ------------ | ------------------------------------------------------------------------- |
+| code        | number   | false    | none         | Either specific error code in case of invalid request or http status code |
+| message     | string   | false    | none         | Message describing error                                                  |
+| stacktraces | [string] | false    | none         | Optional stacktraces, sent when node is in debug mode                     |
+
+<h2 id="tocS_OrderBy">OrderBy</h2>
+
+<a id="schemaorderby"></a>
+<a id="schema_OrderBy"></a>
+<a id="tocSorderby"></a>
+<a id="tocsorderby"></a>
+
+```json
+"-value"
+```
+
+Sort results in either ascending or descending values.
+
+- `-value` - descending value (highest value first)
+- `value` - ascending value (lowest value first)
+
+#### Properties
+
+Sort results in either ascending or descending values. <br /> _ `-value` - descending value (highest
+value first)<br /> _ `value` - ascending value (lowest value first)|
+
+##### Enumerated Values
+
+| Property    | Value  |
+| ----------- | ------ |
+| _anonymous_ | -value |
+| _anonymous_ | value  |
+
+<h2 id="tocS_Bellatrix.SubmitBlockRequest">Bellatrix.SubmitBlockRequest</h2>
+
+<a id="schemabellatrix.submitblockrequest"></a>
+<a id="schema_Bellatrix.SubmitBlockRequest"></a>
+<a id="tocSbellatrix.submitblockrequest"></a>
+<a id="tocsbellatrix.submitblockrequest"></a>
+
+```json
+{
+  "message": {
+    "slot": "1",
+    "parent_hash": 9.387974378126018e76,
+    "block_hash": 9.387974378126018e76,
+    "builder_pubkey": 2.264731349119913e115,
+    "proposer_pubkey": 2.264731349119913e115,
+    "proposer_fee_recipient": 9.808660505397017e47,
+    "gas_limit": "1",
+    "gas_used": "1",
+    "value": "1"
+  },
+  "signature": 1.6617440412512548e230,
+  "execution_payload": {
+    "parent_hash": 9.387974378126018e76,
+    "fee_recipient": 9.808660505397017e47,
+    "state_root": 9.387974378126018e76,
+    "receipts_root": 9.387974378126018e76,
+    "logs_bloom": 0,
+    "prev_randao": 9.387974378126018e76,
+    "block_number": "1",
+    "gas_limit": "1",
+    "gas_used": "1",
+    "timestamp": "1",
+    "extra_data": 9.387974378126018e76,
+    "base_fee_per_gas": "1",
+    "block_hash": 9.387974378126018e76,
+    "transactions": [1.8972227216345134e294]
+  }
+}
+```
+
+#### Properties
+
+allOf
+
+| Name        | Type                                                                                | Required | Restrictions | Description |
+| ----------- | ----------------------------------------------------------------------------------- | -------- | ------------ | ----------- |
+| _anonymous_ | object                                                                              | false    | none         | none        |
+| » message   | [Bellatrix.SubmitBlockRequest_message](#schemabellatrix.submitblockrequest_message) | false    | none         | none        |
+| » signature | string(hex)                                                                         | false    | none         | none        |
+
+and
+
+| Name                | Type   | Required | Restrictions | Description |
+| ------------------- | ------ | -------- | ------------ | ----------- |
+| _anonymous_         | object | false    | none         | none        |
+| » execution_payload | any    | false    | none         | none        |
+
+allOf
+
+| Name                 | Type        | Required | Restrictions | Description                                                                                                                                                           |
+| -------------------- | ----------- | -------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| »» _anonymous_       | object      | false    | none         | The [`ExecutionPayload`](https://github.com/ethereum/consensus-specs/blob/v1.3.0/specs/bellatrix/beacon-chain.md#executionpayload) object from the CL Bellatrix spec. |
+| »»» parent_hash      | string(hex) | false    | none         | none                                                                                                                                                                  |
+| »»» fee_recipient    | string(hex) | false    | none         | An address on the execution (Ethereum 1) network.                                                                                                                     |
+| »»» state_root       | string(hex) | false    | none         | none                                                                                                                                                                  |
+| »»» receipts_root    | string(hex) | false    | none         | none                                                                                                                                                                  |
+| »»» logs_bloom       | string(hex) | false    | none         | none                                                                                                                                                                  |
+| »»» prev_randao      | string(hex) | false    | none         | none                                                                                                                                                                  |
+| »»» block_number     | string      | false    | none         | none                                                                                                                                                                  |
+| »»» gas_limit        | string      | false    | none         | none                                                                                                                                                                  |
+| »»» gas_used         | string      | false    | none         | none                                                                                                                                                                  |
+| »»» timestamp        | string      | false    | none         | none                                                                                                                                                                  |
+| »»» extra_data       | string(hex) | false    | none         | Extra data on the execution (Ethereum 1) network.                                                                                                                     |
+| »»» base_fee_per_gas | string      | false    | none         | none                                                                                                                                                                  |
+| »»» block_hash       | string(hex) | false    | none         | none                                                                                                                                                                  |
+
+and
+
+| Name             | Type     | Required | Restrictions | Description |
+| ---------------- | -------- | -------- | ------------ | ----------- |
+| »» _anonymous_   | object   | false    | none         | none        |
+| »»» transactions | [string] | false    | none         | none        |
+
+<h2 id="tocS_Capella.SubmitBlockRequest">Capella.SubmitBlockRequest</h2>
+
+<a id="schemacapella.submitblockrequest"></a>
+<a id="schema_Capella.SubmitBlockRequest"></a>
+<a id="tocScapella.submitblockrequest"></a>
+<a id="tocscapella.submitblockrequest"></a>
+
+```json
+{
+  "message": null,
+  "signature": 1.6617440412512548e230,
+  "execution_payload": {
+    "parent_hash": 9.387974378126018e76,
+    "fee_recipient": 9.808660505397017e47,
+    "state_root": 9.387974378126018e76,
+    "receipts_root": 9.387974378126018e76,
+    "logs_bloom": 0,
+    "prev_randao": 9.387974378126018e76,
+    "block_number": "1",
+    "gas_limit": "1",
+    "gas_used": "1",
+    "timestamp": "1",
+    "extra_data": 9.387974378126018e76,
+    "base_fee_per_gas": "1",
+    "block_hash": 9.387974378126018e76,
+    "transactions": [1.8972227216345134e294],
+    "withdrawals": [
+      {
+        "index": "1",
+        "validator_index": "1",
+        "address": 9.808660505397017e47,
+        "amount": "1"
+      }
+    ]
+  }
+}
+```
+
+#### Properties
+
+allOf
+
+| Name        | Type                                                                                | Required | Restrictions | Description |
+| ----------- | ----------------------------------------------------------------------------------- | -------- | ------------ | ----------- |
+| _anonymous_ | object                                                                              | false    | none         | none        |
+| » message   | [Bellatrix.SubmitBlockRequest_message](#schemabellatrix.submitblockrequest_message) | false    | none         | none        |
+| » signature | string(hex)                                                                         | false    | none         | none        |
+
+and
+
+| Name                | Type   | Required | Restrictions | Description |
+| ------------------- | ------ | -------- | ------------ | ----------- |
+| _anonymous_         | object | false    | none         | none        |
+| » execution_payload | any    | false    | none         | none        |
+
+allOf
+
+| Name                 | Type        | Required | Restrictions | Description                                                                                                                                                       |
+| -------------------- | ----------- | -------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| »» _anonymous_       | object      | false    | none         | The [`ExecutionPayload`](https://github.com/ethereum/consensus-specs/blob/v1.3.0/specs/capella/beacon-chain.md#executionpayload) object from the CL Capella spec. |
+| »»» parent_hash      | string(hex) | false    | none         | none                                                                                                                                                              |
+| »»» fee_recipient    | string(hex) | false    | none         | An address on the execution (Ethereum 1) network.                                                                                                                 |
+| »»» state_root       | string(hex) | false    | none         | none                                                                                                                                                              |
+| »»» receipts_root    | string(hex) | false    | none         | none                                                                                                                                                              |
+| »»» logs_bloom       | string(hex) | false    | none         | none                                                                                                                                                              |
+| »»» prev_randao      | string(hex) | false    | none         | none                                                                                                                                                              |
+| »»» block_number     | string      | false    | none         | none                                                                                                                                                              |
+| »»» gas_limit        | string      | false    | none         | none                                                                                                                                                              |
+| »»» gas_used         | string      | false    | none         | none                                                                                                                                                              |
+| »»» timestamp        | string      | false    | none         | none                                                                                                                                                              |
+| »»» extra_data       | string(hex) | false    | none         | Extra data on the execution (Ethereum 1) network.                                                                                                                 |
+| »»» base_fee_per_gas | string      | false    | none         | none                                                                                                                                                              |
+| »»» block_hash       | string(hex) | false    | none         | none                                                                                                                                                              |
+
+and
+
+| Name                 | Type        | Required | Restrictions | Description                                      |
+| -------------------- | ----------- | -------- | ------------ | ------------------------------------------------ |
+| »» _anonymous_       | object      | false    | none         | none                                             |
+| »»» transactions     | [string]    | false    | none         | none                                             |
+| »»» withdrawals      | [object]    | false    | none         | none                                             |
+| »»»» index           | string      | false    | none         | The index of the withdrawal.                     |
+| »»»» validator_index | string      | false    | none         | The index of the withdrawing validator.          |
+| »»»» address         | string(hex) | false    | none         | The address to which the withdrawal is credited. |
+| »»»» amount          | string      | false    | none         | The value withdrawn (gwei).                      |
+
+<h2 id="tocS_Deneb.SubmitBlockRequest">Deneb.SubmitBlockRequest</h2>
+
+<a id="schemadeneb.submitblockrequest"></a>
+<a id="schema_Deneb.SubmitBlockRequest"></a>
+<a id="tocSdeneb.submitblockrequest"></a>
+<a id="tocsdeneb.submitblockrequest"></a>
+
+```json
+{
+  "message": null,
+  "signature": 1.6617440412512548e230,
+  "execution_payload": {
+    "parent_hash": 9.387974378126018e76,
+    "fee_recipient": 9.808660505397017e47,
+    "state_root": 9.387974378126018e76,
+    "receipts_root": 9.387974378126018e76,
+    "logs_bloom": 0,
+    "prev_randao": 9.387974378126018e76,
+    "block_number": "1",
+    "gas_limit": "1",
+    "gas_used": "1",
+    "timestamp": "1",
+    "extra_data": 9.387974378126018e76,
+    "base_fee_per_gas": "1",
+    "excess_data_gas": "1",
+    "block_hash": 9.387974378126018e76,
+    "transactions": [1.8972227216345134e294],
+    "withdrawals": [
+      {
+        "index": "1",
+        "validator_index": "1",
+        "address": 9.808660505397017e47,
+        "amount": "1"
+      }
+    ]
+  },
+  "blobs_bundle": {
+    "blobs": ["string"],
+    "commitments": [2.264731349119913e115],
+    "proofs": ["string"]
+  }
+}
+```
+
+#### Properties
+
+allOf
+
+| Name        | Type                                                                                | Required | Restrictions | Description |
+| ----------- | ----------------------------------------------------------------------------------- | -------- | ------------ | ----------- |
+| _anonymous_ | object                                                                              | false    | none         | none        |
+| » message   | [Bellatrix.SubmitBlockRequest_message](#schemabellatrix.submitblockrequest_message) | false    | none         | none        |
+| » signature | string(hex)                                                                         | false    | none         | none        |
+
+and
+
+| Name                | Type   | Required | Restrictions | Description                                                          |
+| ------------------- | ------ | -------- | ------------ | -------------------------------------------------------------------- |
+| _anonymous_         | object | false    | none         | A wrapper object containing the ExecutionPayload and the BlobsBundle |
+| » execution_payload | any    | false    | none         | none                                                                 |
+
+allOf
+
+| Name                 | Type        | Required | Restrictions | Description                                                                                                                                                   |
+| -------------------- | ----------- | -------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| »» _anonymous_       | object      | false    | none         | The [`ExecutionPayload`](https://github.com/ethereum/consensus-specs/blob/master/specs/deneb/beacon-chain.md#executionpayload) object from the CL Deneb spec. |
+| »»» parent_hash      | string(hex) | false    | none         | none                                                                                                                                                          |
+| »»» fee_recipient    | string(hex) | false    | none         | An address on the execution (Ethereum 1) network.                                                                                                             |
+| »»» state_root       | string(hex) | false    | none         | none                                                                                                                                                          |
+| »»» receipts_root    | string(hex) | false    | none         | none                                                                                                                                                          |
+| »»» logs_bloom       | string(hex) | false    | none         | none                                                                                                                                                          |
+| »»» prev_randao      | string(hex) | false    | none         | none                                                                                                                                                          |
+| »»» block_number     | string      | false    | none         | none                                                                                                                                                          |
+| »»» gas_limit        | string      | false    | none         | none                                                                                                                                                          |
+| »»» gas_used         | string      | false    | none         | none                                                                                                                                                          |
+| »»» timestamp        | string      | false    | none         | none                                                                                                                                                          |
+| »»» extra_data       | string(hex) | false    | none         | Extra data on the execution (Ethereum 1) network.                                                                                                             |
+| »»» base_fee_per_gas | string      | false    | none         | none                                                                                                                                                          |
+| »»» excess_data_gas  | string      | false    | none         | none                                                                                                                                                          |
+| »»» block_hash       | string(hex) | false    | none         | none                                                                                                                                                          |
+
+and
+
+| Name                 | Type        | Required | Restrictions | Description                                      |
+| -------------------- | ----------- | -------- | ------------ | ------------------------------------------------ |
+| »» _anonymous_       | object      | false    | none         | none                                             |
+| »»» transactions     | [string]    | false    | none         | none                                             |
+| »»» withdrawals      | [object]    | false    | none         | none                                             |
+| »»»» index           | string      | false    | none         | The index of the withdrawal.                     |
+| »»»» validator_index | string      | false    | none         | The index of the withdrawing validator.          |
+| »»»» address         | string(hex) | false    | none         | The address to which the withdrawal is credited. |
+| »»»» amount          | string      | false    | none         | The value withdrawn (gwei).                      |
+
+continued
+
+| Name           | Type                                                                                  | Required | Restrictions | Description                                     |
+| -------------- | ------------------------------------------------------------------------------------- | -------- | ------------ | ----------------------------------------------- |
+| » blobs_bundle | [Deneb.SubmitBlockRequest_blobs_bundle](#schemadeneb.submitblockrequest_blobs_bundle) | false    | none         | The `BlobsBundle` object from the CL Deneb spec |
+
+<h2 id="tocS_ValidatorsResponse">ValidatorsResponse</h2>
+
+<a id="schemavalidatorsresponse"></a>
+<a id="schema_ValidatorsResponse"></a>
+<a id="tocSvalidatorsresponse"></a>
+<a id="tocsvalidatorsresponse"></a>
+
+```json
+[
+  {
+    "slot": "1",
+    "validator_index": "1",
+    "entry": {
+      "message": {
+        "fee_recipient": 9.808660505397017e47,
+        "gas_limit": "1",
+        "timestamp": "1",
+        "pubkey": 2.264731349119913e115
+      },
+      "signature": 1.6617440412512548e230
+    }
+  }
+]
+```
+
+#### Properties
+
+| Name        | Type                                                          | Required | Restrictions | Description |
+| ----------- | ------------------------------------------------------------- | -------- | ------------ | ----------- |
+| _anonymous_ | [[ValidatorsResponse_inner](#schemavalidatorsresponse_inner)] | false    | none         | none        |
+
+<h2 id="tocS_DeliveredPayloadsResponse">DeliveredPayloadsResponse</h2>
+
+<a id="schemadeliveredpayloadsresponse"></a>
+<a id="schema_DeliveredPayloadsResponse"></a>
+<a id="tocSdeliveredpayloadsresponse"></a>
+<a id="tocsdeliveredpayloadsresponse"></a>
+
+```json
+[
+  {
+    "slot": "1",
+    "parent_hash": 9.387974378126018e76,
+    "block_hash": 9.387974378126018e76,
+    "builder_pubkey": 2.264731349119913e115,
+    "proposer_pubkey": 2.264731349119913e115,
+    "proposer_fee_recipient": 9.808660505397017e47,
+    "gas_limit": "1",
+    "gas_used": "1",
+    "value": "1",
+    "block_number": "1",
+    "num_tx": "1"
+  }
+]
+```
+
+#### Properties
+
+allOf
+
+| Name                     | Type        | Required | Restrictions | Description                                                                                                          |
+| ------------------------ | ----------- | -------- | ------------ | -------------------------------------------------------------------------------------------------------------------- |
+| _anonymous_              | object      | false    | none         | none                                                                                                                 |
+| » slot                   | string      | false    | none         | none                                                                                                                 |
+| » parent_hash            | string(hex) | false    | none         | none                                                                                                                 |
+| » block_hash             | string(hex) | false    | none         | none                                                                                                                 |
+| » builder_pubkey         | string(hex) | false    | none         | The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._ |
+| » proposer_pubkey        | string(hex) | false    | none         | The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._ |
+| » proposer_fee_recipient | string(hex) | false    | none         | An address on the execution (Ethereum 1) network.                                                                    |
+| » gas_limit              | string      | false    | none         | none                                                                                                                 |
+| » gas_used               | string      | false    | none         | none                                                                                                                 |
+| » value                  | string      | false    | none         | none                                                                                                                 |
+
+and
+
+| Name           | Type   | Required | Restrictions | Description |
+| -------------- | ------ | -------- | ------------ | ----------- |
+| _anonymous_    | object | false    | none         | none        |
+| » block_number | string | false    | none         | none        |
+| » num_tx       | string | false    | none         | none        |
+
+<h2 id="tocS_ReceivedBlocksResponse">ReceivedBlocksResponse</h2>
+
+<a id="schemareceivedblocksresponse"></a>
+<a id="schema_ReceivedBlocksResponse"></a>
+<a id="tocSreceivedblocksresponse"></a>
+<a id="tocsreceivedblocksresponse"></a>
+
+```json
+[
+  {
+    "slot": "1",
+    "parent_hash": 9.387974378126018e76,
+    "block_hash": 9.387974378126018e76,
+    "builder_pubkey": 2.264731349119913e115,
+    "proposer_pubkey": 2.264731349119913e115,
+    "proposer_fee_recipient": 9.808660505397017e47,
+    "gas_limit": "1",
+    "gas_used": "1",
+    "value": "1",
+    "block_number": "1",
+    "num_tx": "1",
+    "timestamp": "1",
+    "timestamp_ms": "1"
+  }
+]
+```
+
+#### Properties
+
+allOf
+
+| Name        | Type | Required | Restrictions | Description |
+| ----------- | ---- | -------- | ------------ | ----------- |
+| _anonymous_ | any  | false    | none         | none        |
+
+allOf
+
+| Name                      | Type        | Required | Restrictions | Description                                                                                                          |
+| ------------------------- | ----------- | -------- | ------------ | -------------------------------------------------------------------------------------------------------------------- |
+| » _anonymous_             | object      | false    | none         | none                                                                                                                 |
+| »» slot                   | string      | false    | none         | none                                                                                                                 |
+| »» parent_hash            | string(hex) | false    | none         | none                                                                                                                 |
+| »» block_hash             | string(hex) | false    | none         | none                                                                                                                 |
+| »» builder_pubkey         | string(hex) | false    | none         | The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._ |
+| »» proposer_pubkey        | string(hex) | false    | none         | The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._ |
+| »» proposer_fee_recipient | string(hex) | false    | none         | An address on the execution (Ethereum 1) network.                                                                    |
+| »» gas_limit              | string      | false    | none         | none                                                                                                                 |
+| »» gas_used               | string      | false    | none         | none                                                                                                                 |
+| »» value                  | string      | false    | none         | none                                                                                                                 |
+
+and
+
+| Name            | Type   | Required | Restrictions | Description |
+| --------------- | ------ | -------- | ------------ | ----------- |
+| » _anonymous_   | object | false    | none         | none        |
+| »» block_number | string | false    | none         | none        |
+| »» num_tx       | string | false    | none         | none        |
+
+and
+
+| Name           | Type   | Required | Restrictions | Description |
+| -------------- | ------ | -------- | ------------ | ----------- |
+| _anonymous_    | object | false    | none         | none        |
+| » timestamp    | string | false    | none         | none        |
+| » timestamp_ms | string | false    | none         | none        |
+
+<h2 id="tocS_validators_entry_message">validators_entry_message</h2>
+
+<a id="schemavalidators_entry_message"></a>
+<a id="schema_validators_entry_message"></a>
+<a id="tocSvalidators_entry_message"></a>
+<a id="tocsvalidators_entry_message"></a>
+
+```json
+{
+  "fee_recipient": 9.808660505397017e47,
+  "gas_limit": "1",
+  "timestamp": "1",
+  "pubkey": 2.264731349119913e115
+}
+```
+
+The `ValidatorRegistration` object from the Builder API specification.
+
+#### Properties
+
+| Name          | Type        | Required | Restrictions | Description                             |
+| ------------- | ----------- | -------- | ------------ | --------------------------------------- |
+| fee_recipient | string(hex) | false    | none         | Address to receive fees from the block. |
+| gas_limit     | string      | false    | none         | Preferred gas limit of validator.       |
+| timestamp     | string      | false    | none         | Unix timestamp of registration.         |
+| pubkey        | string(hex) | false    | none         | BLS public key of validator.            |
+
+<h2 id="tocS_validators_entry">validators_entry</h2>
+
+<a id="schemavalidators_entry"></a>
+<a id="schema_validators_entry"></a>
+<a id="tocSvalidators_entry"></a>
+<a id="tocsvalidators_entry"></a>
+
+```json
+{
+  "message": {
+    "fee_recipient": 9.808660505397017e47,
+    "gas_limit": "1",
+    "timestamp": "1",
+    "pubkey": 2.264731349119913e115
+  },
+  "signature": 1.6617440412512548e230
+}
+```
+
+The `SignedValidatorRegistration` object from the Builder API specification.
+
+#### Properties
+
+| Name      | Type                                                        | Required | Restrictions | Description                                                            |
+| --------- | ----------------------------------------------------------- | -------- | ------------ | ---------------------------------------------------------------------- |
+| message   | [validators_entry_message](#schemavalidators_entry_message) | false    | none         | The `ValidatorRegistration` object from the Builder API specification. |
+| signature | string(hex)                                                 | false    | none         | none                                                                   |
+
+<h2 id="tocS_inline_response_200">inline_response_200</h2>
+
+<a id="schemainline_response_200"></a>
+<a id="schema_inline_response_200"></a>
+<a id="tocSinline_response_200"></a>
+<a id="tocsinline_response_200"></a>
+
+```json
+{
+  "slot": "1",
+  "validator_index": "1",
+  "entry": {
+    "message": {
+      "fee_recipient": 9.808660505397017e47,
+      "gas_limit": "1",
+      "timestamp": "1",
+      "pubkey": 2.264731349119913e115
+    },
+    "signature": 1.6617440412512548e230
+  }
+}
+```
+
+#### Properties
+
+| Name            | Type                                        | Required | Restrictions | Description                                                                  |
+| --------------- | ------------------------------------------- | -------- | ------------ | ---------------------------------------------------------------------------- |
+| slot            | string                                      | false    | none         | none                                                                         |
+| validator_index | string                                      | false    | none         | none                                                                         |
+| entry           | [validators_entry](#schemavalidators_entry) | false    | none         | The `SignedValidatorRegistration` object from the Builder API specification. |
+
+<h2 id="tocS_builder_blocks_body">builder_blocks_body</h2>
+
+<a id="schemabuilder_blocks_body"></a>
+<a id="schema_builder_blocks_body"></a>
+<a id="tocSbuilder_blocks_body"></a>
+<a id="tocsbuilder_blocks_body"></a>
+
+```json
+{
+  "message": {
+    "slot": "1",
+    "parent_hash": 9.387974378126018e76,
+    "block_hash": 9.387974378126018e76,
+    "builder_pubkey": 2.264731349119913e115,
+    "proposer_pubkey": 2.264731349119913e115,
+    "proposer_fee_recipient": 9.808660505397017e47,
+    "gas_limit": "1",
+    "gas_used": "1",
+    "value": "1"
+  },
+  "signature": 1.6617440412512548e230,
+  "execution_payload": {
+    "parent_hash": 9.387974378126018e76,
+    "fee_recipient": 9.808660505397017e47,
+    "state_root": 9.387974378126018e76,
+    "receipts_root": 9.387974378126018e76,
+    "logs_bloom": 0,
+    "prev_randao": 9.387974378126018e76,
+    "block_number": "1",
+    "gas_limit": "1",
+    "gas_used": "1",
+    "timestamp": "1",
+    "extra_data": 9.387974378126018e76,
+    "base_fee_per_gas": "1",
+    "block_hash": 9.387974378126018e76,
+    "transactions": [1.8972227216345134e294]
+  }
+}
+```
+
+#### Properties
+
+oneOf
+
+| Name        | Type | Required | Restrictions | Description |
+| ----------- | ---- | -------- | ------------ | ----------- |
+| _anonymous_ | any  | false    | none         | none        |
+
+allOf
+
+| Name                       | Type        | Required | Restrictions | Description                                                                                                          |
+| -------------------------- | ----------- | -------- | ------------ | -------------------------------------------------------------------------------------------------------------------- |
+| » _anonymous_              | object      | false    | none         | none                                                                                                                 |
+| »» message                 | object      | false    | none         | none                                                                                                                 |
+| »»» slot                   | string      | false    | none         | none                                                                                                                 |
+| »»» parent_hash            | string(hex) | false    | none         | none                                                                                                                 |
+| »»» block_hash             | string(hex) | false    | none         | none                                                                                                                 |
+| »»» builder_pubkey         | string(hex) | false    | none         | The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._ |
+| »»» proposer_pubkey        | string(hex) | false    | none         | The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._ |
+| »»» proposer_fee_recipient | string(hex) | false    | none         | An address on the execution (Ethereum 1) network.                                                                    |
+| »»» gas_limit              | string      | false    | none         | none                                                                                                                 |
+| »»» gas_used               | string      | false    | none         | none                                                                                                                 |
+| »»» value                  | string      | false    | none         | none                                                                                                                 |
+| »» signature               | string(hex) | false    | none         | none                                                                                                                 |
+
+and
+
+| Name                 | Type   | Required | Restrictions | Description |
+| -------------------- | ------ | -------- | ------------ | ----------- |
+| » _anonymous_        | object | false    | none         | none        |
+| »» execution_payload | any    | false    | none         | none        |
+
+allOf
+
+| Name                  | Type        | Required | Restrictions | Description                                                                                                                                                           |
+| --------------------- | ----------- | -------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| »»» _anonymous_       | object      | false    | none         | The [`ExecutionPayload`](https://github.com/ethereum/consensus-specs/blob/v1.3.0/specs/bellatrix/beacon-chain.md#executionpayload) object from the CL Bellatrix spec. |
+| »»»» parent_hash      | string(hex) | false    | none         | none                                                                                                                                                                  |
+| »»»» fee_recipient    | string(hex) | false    | none         | An address on the execution (Ethereum 1) network.                                                                                                                     |
+| »»»» state_root       | string(hex) | false    | none         | none                                                                                                                                                                  |
+| »»»» receipts_root    | string(hex) | false    | none         | none                                                                                                                                                                  |
+| »»»» logs_bloom       | string(hex) | false    | none         | none                                                                                                                                                                  |
+| »»»» prev_randao      | string(hex) | false    | none         | none                                                                                                                                                                  |
+| »»»» block_number     | string      | false    | none         | none                                                                                                                                                                  |
+| »»»» gas_limit        | string      | false    | none         | none                                                                                                                                                                  |
+| »»»» gas_used         | string      | false    | none         | none                                                                                                                                                                  |
+| »»»» timestamp        | string      | false    | none         | none                                                                                                                                                                  |
+| »»»» extra_data       | string(hex) | false    | none         | Extra data on the execution (Ethereum 1) network.                                                                                                                     |
+| »»»» base_fee_per_gas | string      | false    | none         | none                                                                                                                                                                  |
+| »»»» block_hash       | string(hex) | false    | none         | none                                                                                                                                                                  |
+
+and
+
+| Name              | Type     | Required | Restrictions | Description |
+| ----------------- | -------- | -------- | ------------ | ----------- |
+| »»» _anonymous_   | object   | false    | none         | none        |
+| »»»» transactions | [string] | false    | none         | none        |
+
+xor
+
+| Name        | Type | Required | Restrictions | Description |
+| ----------- | ---- | -------- | ------------ | ----------- |
+| _anonymous_ | any  | false    | none         | none        |
+
+allOf
+
+| Name                       | Type        | Required | Restrictions | Description                                                                                                          |
+| -------------------------- | ----------- | -------- | ------------ | -------------------------------------------------------------------------------------------------------------------- |
+| » _anonymous_              | object      | false    | none         | none                                                                                                                 |
+| »» message                 | object      | false    | none         | none                                                                                                                 |
+| »»» slot                   | string      | false    | none         | none                                                                                                                 |
+| »»» parent_hash            | string(hex) | false    | none         | none                                                                                                                 |
+| »»» block_hash             | string(hex) | false    | none         | none                                                                                                                 |
+| »»» builder_pubkey         | string(hex) | false    | none         | The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._ |
+| »»» proposer_pubkey        | string(hex) | false    | none         | The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._ |
+| »»» proposer_fee_recipient | string(hex) | false    | none         | An address on the execution (Ethereum 1) network.                                                                    |
+| »»» gas_limit              | string      | false    | none         | none                                                                                                                 |
+| »»» gas_used               | string      | false    | none         | none                                                                                                                 |
+| »»» value                  | string      | false    | none         | none                                                                                                                 |
+| »» signature               | string(hex) | false    | none         | none                                                                                                                 |
+
+and
+
+| Name                 | Type   | Required | Restrictions | Description |
+| -------------------- | ------ | -------- | ------------ | ----------- |
+| » _anonymous_        | object | false    | none         | none        |
+| »» execution_payload | any    | false    | none         | none        |
+
+allOf
+
+| Name                  | Type        | Required | Restrictions | Description                                                                                                                                                       |
+| --------------------- | ----------- | -------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| »»» _anonymous_       | object      | false    | none         | The [`ExecutionPayload`](https://github.com/ethereum/consensus-specs/blob/v1.3.0/specs/capella/beacon-chain.md#executionpayload) object from the CL Capella spec. |
+| »»»» parent_hash      | string(hex) | false    | none         | none                                                                                                                                                              |
+| »»»» fee_recipient    | string(hex) | false    | none         | An address on the execution (Ethereum 1) network.                                                                                                                 |
+| »»»» state_root       | string(hex) | false    | none         | none                                                                                                                                                              |
+| »»»» receipts_root    | string(hex) | false    | none         | none                                                                                                                                                              |
+| »»»» logs_bloom       | string(hex) | false    | none         | none                                                                                                                                                              |
+| »»»» prev_randao      | string(hex) | false    | none         | none                                                                                                                                                              |
+| »»»» block_number     | string      | false    | none         | none                                                                                                                                                              |
+| »»»» gas_limit        | string      | false    | none         | none                                                                                                                                                              |
+| »»»» gas_used         | string      | false    | none         | none                                                                                                                                                              |
+| »»»» timestamp        | string      | false    | none         | none                                                                                                                                                              |
+| »»»» extra_data       | string(hex) | false    | none         | Extra data on the execution (Ethereum 1) network.                                                                                                                 |
+| »»»» base_fee_per_gas | string      | false    | none         | none                                                                                                                                                              |
+| »»»» block_hash       | string(hex) | false    | none         | none                                                                                                                                                              |
+
+and
+
+| Name                  | Type        | Required | Restrictions | Description                                      |
+| --------------------- | ----------- | -------- | ------------ | ------------------------------------------------ |
+| »»» _anonymous_       | object      | false    | none         | none                                             |
+| »»»» transactions     | [string]    | false    | none         | none                                             |
+| »»»» withdrawals      | [object]    | false    | none         | none                                             |
+| »»»»» index           | string      | false    | none         | The index of the withdrawal.                     |
+| »»»»» validator_index | string      | false    | none         | The index of the withdrawing validator.          |
+| »»»»» address         | string(hex) | false    | none         | The address to which the withdrawal is credited. |
+| »»»»» amount          | string      | false    | none         | The value withdrawn (gwei).                      |
+
+xor
+
+| Name        | Type | Required | Restrictions | Description |
+| ----------- | ---- | -------- | ------------ | ----------- |
+| _anonymous_ | any  | false    | none         | none        |
+
+allOf
+
+| Name                       | Type        | Required | Restrictions | Description                                                                                                          |
+| -------------------------- | ----------- | -------- | ------------ | -------------------------------------------------------------------------------------------------------------------- |
+| » _anonymous_              | object      | false    | none         | none                                                                                                                 |
+| »» message                 | object      | false    | none         | none                                                                                                                 |
+| »»» slot                   | string      | false    | none         | none                                                                                                                 |
+| »»» parent_hash            | string(hex) | false    | none         | none                                                                                                                 |
+| »»» block_hash             | string(hex) | false    | none         | none                                                                                                                 |
+| »»» builder_pubkey         | string(hex) | false    | none         | The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._ |
+| »»» proposer_pubkey        | string(hex) | false    | none         | The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._ |
+| »»» proposer_fee_recipient | string(hex) | false    | none         | An address on the execution (Ethereum 1) network.                                                                    |
+| »»» gas_limit              | string      | false    | none         | none                                                                                                                 |
+| »»» gas_used               | string      | false    | none         | none                                                                                                                 |
+| »»» value                  | string      | false    | none         | none                                                                                                                 |
+| »» signature               | string(hex) | false    | none         | none                                                                                                                 |
+
+and
+
+| Name                 | Type   | Required | Restrictions | Description                                                          |
+| -------------------- | ------ | -------- | ------------ | -------------------------------------------------------------------- |
+| » _anonymous_        | object | false    | none         | A wrapper object containing the ExecutionPayload and the BlobsBundle |
+| »» execution_payload | any    | false    | none         | none                                                                 |
+
+allOf
+
+| Name                  | Type        | Required | Restrictions | Description                                                                                                                                                   |
+| --------------------- | ----------- | -------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| »»» _anonymous_       | object      | false    | none         | The [`ExecutionPayload`](https://github.com/ethereum/consensus-specs/blob/master/specs/deneb/beacon-chain.md#executionpayload) object from the CL Deneb spec. |
+| »»»» parent_hash      | string(hex) | false    | none         | none                                                                                                                                                          |
+| »»»» fee_recipient    | string(hex) | false    | none         | An address on the execution (Ethereum 1) network.                                                                                                             |
+| »»»» state_root       | string(hex) | false    | none         | none                                                                                                                                                          |
+| »»»» receipts_root    | string(hex) | false    | none         | none                                                                                                                                                          |
+| »»»» logs_bloom       | string(hex) | false    | none         | none                                                                                                                                                          |
+| »»»» prev_randao      | string(hex) | false    | none         | none                                                                                                                                                          |
+| »»»» block_number     | string      | false    | none         | none                                                                                                                                                          |
+| »»»» gas_limit        | string      | false    | none         | none                                                                                                                                                          |
+| »»»» gas_used         | string      | false    | none         | none                                                                                                                                                          |
+| »»»» timestamp        | string      | false    | none         | none                                                                                                                                                          |
+| »»»» extra_data       | string(hex) | false    | none         | Extra data on the execution (Ethereum 1) network.                                                                                                             |
+| »»»» base_fee_per_gas | string      | false    | none         | none                                                                                                                                                          |
+| »»»» excess_data_gas  | string      | false    | none         | none                                                                                                                                                          |
+| »»»» block_hash       | string(hex) | false    | none         | none                                                                                                                                                          |
+
+and
+
+| Name                  | Type        | Required | Restrictions | Description                                      |
+| --------------------- | ----------- | -------- | ------------ | ------------------------------------------------ |
+| »»» _anonymous_       | object      | false    | none         | none                                             |
+| »»»» transactions     | [string]    | false    | none         | none                                             |
+| »»»» withdrawals      | [object]    | false    | none         | none                                             |
+| »»»»» index           | string      | false    | none         | The index of the withdrawal.                     |
+| »»»»» validator_index | string      | false    | none         | The index of the withdrawing validator.          |
+| »»»»» address         | string(hex) | false    | none         | The address to which the withdrawal is credited. |
+| »»»»» amount          | string      | false    | none         | The value withdrawn (gwei).                      |
+
+continued
+
+| Name            | Type     | Required | Restrictions | Description                                     |
+| --------------- | -------- | -------- | ------------ | ----------------------------------------------- |
+| »» blobs_bundle | object   | false    | none         | The `BlobsBundle` object from the CL Deneb spec |
+| »»» blobs       | [string] | false    | none         | none                                            |
+
+<h2 id="tocS_inline_response_400">inline_response_400</h2>
+
+<a id="schemainline_response_400"></a>
+<a id="schema_inline_response_400"></a>
+<a id="tocSinline_response_400"></a>
+<a id="tocsinline_response_400"></a>
+
+```json
+{
+  "code": 400,
+  "message": "payload for this slot was already delivered",
+  "stacktraces": ["string"]
+}
+```
+
+#### Properties
+
+allOf
+
+| Name          | Type     | Required | Restrictions | Description                                                               |
+| ------------- | -------- | -------- | ------------ | ------------------------------------------------------------------------- |
+| _anonymous_   | object   | false    | none         | none                                                                      |
+| » code        | number   | false    | none         | Either specific error code in case of invalid request or http status code |
+| » message     | string   | false    | none         | Message describing error                                                  |
+| » stacktraces | [string] | false    | none         | Optional stacktraces, sent when node is in debug mode                     |
+
+and
+
+| Name        | Type | Required | Restrictions | Description |
+| ----------- | ---- | -------- | ------------ | ----------- |
+| _anonymous_ | any  | false    | none         | none        |
+
+<h2 id="tocS_inline_response_500">inline_response_500</h2>
+
+<a id="schemainline_response_500"></a>
+<a id="schema_inline_response_500"></a>
+<a id="tocSinline_response_500"></a>
+<a id="tocsinline_response_500"></a>
+
+```json
+{
+  "code": 404,
+  "message": "string",
+  "stacktraces": ["string"]
+}
+```
+
+#### Properties
+
+| Name        | Type     | Required | Restrictions | Description                                                               |
+| ----------- | -------- | -------- | ------------ | ------------------------------------------------------------------------- |
+| code        | number   | false    | none         | Either specific error code in case of invalid request or http status code |
+| message     | string   | false    | none         | Message describing error                                                  |
+| stacktraces | [string] | false    | none         | Optional stacktraces, sent when node is in debug mode                     |
+
+<h2 id="tocS_inline_response_400_1">inline_response_400_1</h2>
+
+<a id="schemainline_response_400_1"></a>
+<a id="schema_inline_response_400_1"></a>
+<a id="tocSinline_response_400_1"></a>
+<a id="tocsinline_response_400_1"></a>
+
+```json
+{
+  "code": 400,
+  "message": "invalid block_hash argument",
+  "stacktraces": ["string"]
+}
+```
+
+#### Properties
+
+allOf
+
+| Name          | Type     | Required | Restrictions | Description                                                               |
+| ------------- | -------- | -------- | ------------ | ------------------------------------------------------------------------- |
+| _anonymous_   | object   | false    | none         | none                                                                      |
+| » code        | number   | false    | none         | Either specific error code in case of invalid request or http status code |
+| » message     | string   | false    | none         | Message describing error                                                  |
+| » stacktraces | [string] | false    | none         | Optional stacktraces, sent when node is in debug mode                     |
+
+and
+
+| Name        | Type | Required | Restrictions | Description |
+| ----------- | ---- | -------- | ------------ | ----------- |
+| _anonymous_ | any  | false    | none         | none        |
+
+<h2 id="tocS_inline_response_400_2">inline_response_400_2</h2>
+
+<a id="schemainline_response_400_2"></a>
+<a id="schema_inline_response_400_2"></a>
+<a id="tocSinline_response_400_2"></a>
+<a id="tocsinline_response_400_2"></a>
+
+```json
+{
+  "code": 400,
+  "message": "cannot specify both slot and cursor",
+  "stacktraces": ["string"]
+}
+```
+
+#### Properties
+
+allOf
+
+| Name          | Type     | Required | Restrictions | Description                                                               |
+| ------------- | -------- | -------- | ------------ | ------------------------------------------------------------------------- |
+| _anonymous_   | object   | false    | none         | none                                                                      |
+| » code        | number   | false    | none         | Either specific error code in case of invalid request or http status code |
+| » message     | string   | false    | none         | Message describing error                                                  |
+| » stacktraces | [string] | false    | none         | Optional stacktraces, sent when node is in debug mode                     |
+
+and
+
+| Name        | Type | Required | Restrictions | Description |
+| ----------- | ---- | -------- | ------------ | ----------- |
+| _anonymous_ | any  | false    | none         | none        |
+
+<h2 id="tocS_inline_response_200_1">inline_response_200_1</h2>
+
+<a id="schemainline_response_200_1"></a>
+<a id="schema_inline_response_200_1"></a>
+<a id="tocSinline_response_200_1"></a>
+<a id="tocsinline_response_200_1"></a>
+
+```json
+{
+  "message": {
+    "fee_recipient": 9.808660505397017e47,
+    "gas_limit": "1",
+    "timestamp": "1",
+    "pubkey": 2.264731349119913e115
+  },
+  "signature": 1.6617440412512548e230
+}
+```
+
+The `SignedValidatorRegistration` object from the Builder API specification.
+
+#### Properties
+
+| Name      | Type                                                        | Required | Restrictions | Description                                                            |
+| --------- | ----------------------------------------------------------- | -------- | ------------ | ---------------------------------------------------------------------- |
+| message   | [validators_entry_message](#schemavalidators_entry_message) | false    | none         | The `ValidatorRegistration` object from the Builder API specification. |
+| signature | string(hex)                                                 | false    | none         | none                                                                   |
+
+<h2 id="tocS_inline_response_400_3">inline_response_400_3</h2>
+
+<a id="schemainline_response_400_3"></a>
+<a id="schema_inline_response_400_3"></a>
+<a id="tocSinline_response_400_3"></a>
+<a id="tocsinline_response_400_3"></a>
+
+```json
+{
+  "code": 400,
+  "message": "missing pubkey argument",
+  "stacktraces": ["string"]
+}
+```
+
+#### Properties
+
+allOf
+
+| Name          | Type     | Required | Restrictions | Description                                                               |
+| ------------- | -------- | -------- | ------------ | ------------------------------------------------------------------------- |
+| _anonymous_   | object   | false    | none         | none                                                                      |
+| » code        | number   | false    | none         | Either specific error code in case of invalid request or http status code |
+| » message     | string   | false    | none         | Message describing error                                                  |
+| » stacktraces | [string] | false    | none         | Optional stacktraces, sent when node is in debug mode                     |
+
+and
+
+| Name        | Type | Required | Restrictions | Description |
+| ----------- | ---- | -------- | ------------ | ----------- |
+| _anonymous_ | any  | false    | none         | none        |
+
+<h2 id="tocS_Bellatrix.SubmitBlockRequest_message">Bellatrix.SubmitBlockRequest_message</h2>
+
+<a id="schemabellatrix.submitblockrequest_message"></a>
+<a id="schema_Bellatrix.SubmitBlockRequest_message"></a>
+<a id="tocSbellatrix.submitblockrequest_message"></a>
+<a id="tocsbellatrix.submitblockrequest_message"></a>
+
+```json
+{
+  "slot": "1",
+  "parent_hash": 9.387974378126018e76,
+  "block_hash": 9.387974378126018e76,
+  "builder_pubkey": 2.264731349119913e115,
+  "proposer_pubkey": 2.264731349119913e115,
+  "proposer_fee_recipient": 9.808660505397017e47,
+  "gas_limit": "1",
+  "gas_used": "1",
+  "value": "1"
+}
+```
+
+#### Properties
+
+| Name                   | Type        | Required | Restrictions | Description                                                                                                          |
+| ---------------------- | ----------- | -------- | ------------ | -------------------------------------------------------------------------------------------------------------------- |
+| slot                   | string      | false    | none         | none                                                                                                                 |
+| parent_hash            | string(hex) | false    | none         | none                                                                                                                 |
+| block_hash             | string(hex) | false    | none         | none                                                                                                                 |
+| builder_pubkey         | string(hex) | false    | none         | The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._ |
+| proposer_pubkey        | string(hex) | false    | none         | The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._ |
+| proposer_fee_recipient | string(hex) | false    | none         | An address on the execution (Ethereum 1) network.                                                                    |
+| gas_limit              | string      | false    | none         | none                                                                                                                 |
+| gas_used               | string      | false    | none         | none                                                                                                                 |
+| value                  | string      | false    | none         | none                                                                                                                 |
+
+<h2 id="tocS_Deneb.SubmitBlockRequest_blobs_bundle">Deneb.SubmitBlockRequest_blobs_bundle</h2>
+
+<a id="schemadeneb.submitblockrequest_blobs_bundle"></a>
+<a id="schema_Deneb.SubmitBlockRequest_blobs_bundle"></a>
+<a id="tocSdeneb.submitblockrequest_blobs_bundle"></a>
+<a id="tocsdeneb.submitblockrequest_blobs_bundle"></a>
+
+```json
+{
+  "blobs": ["string"],
+  "commitments": [2.264731349119913e115],
+  "proofs": ["string"]
+}
+```
+
+The `BlobsBundle` object from the CL Deneb spec
+
+#### Properties
+
+| Name  | Type     | Required | Restrictions | Description |
+| ----- | -------- | -------- | ------------ | ----------- |
+| blobs | [string] | false    | none         | none        |
+
+<h2 id="tocS_ValidatorsResponse_inner">ValidatorsResponse_inner</h2>
+
+<a id="schemavalidatorsresponse_inner"></a>
+<a id="schema_ValidatorsResponse_inner"></a>
+<a id="tocSvalidatorsresponse_inner"></a>
+<a id="tocsvalidatorsresponse_inner"></a>
+
+```json
+{
+  "slot": "1",
+  "validator_index": "1",
+  "entry": {
+    "message": {
+      "fee_recipient": 9.808660505397017e47,
+      "gas_limit": "1",
+      "timestamp": "1",
+      "pubkey": 2.264731349119913e115
+    },
+    "signature": 1.6617440412512548e230
+  }
+}
+```
+
+#### Properties
+
+| Name             | Type        | Required | Restrictions | Description                                                                  |
+| ---------------- | ----------- | -------- | ------------ | ---------------------------------------------------------------------------- |
+| slot             | string      | false    | none         | none                                                                         |
+| validator_index  | string      | false    | none         | none                                                                         |
+| entry            | object      | false    | none         | The `SignedValidatorRegistration` object from the Builder API specification. |
+| » message        | object      | false    | none         | The `ValidatorRegistration` object from the Builder API specification.       |
+| »» fee_recipient | string(hex) | false    | none         | Address to receive fees from the block.                                      |
+| »» gas_limit     | string      | false    | none         | Preferred gas limit of validator.                                            |
+| »» timestamp     | string      | false    | none         | Unix timestamp of registration.                                              |
+| »» pubkey        | string(hex) | false    | none         | BLS public key of validator.                                                 |
+| » signature      | string(hex) | false    | none         | none                                                                         |

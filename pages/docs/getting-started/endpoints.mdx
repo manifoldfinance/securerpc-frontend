@@ -1,0 +1,72 @@
+---
+title: 'Endpoints'
+description: 'Get started with SecureRPC in just a few minutes'
+---
+
+import { Steps, Tabs, Callout } from 'nextra/components';
+
+# Quickstart
+
+| **network** | **json_rpc**                 | **enr_rpc**                                                                                                                     |
+| ----------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| homestead   | mainnet-relay.securerpc.com/ | 0x98650451ba02064f7b000f5768cf0cf4d4e492317d82871bdc87ef841a0743f69f0f1eea11168503240ac35d101c9135@mainnet-relay.securerpc.com/ |
+
+<Steps>
+
+### Connecting
+
+<Callout type="info">
+  We recommend using `cast` from the [Foundry](https://book.getfoundry.sh/cast/overview) toolkit to
+  interact with the network.
+</Callout>
+
+{/* prettier-ignore */}
+<Tabs items={["users", "developers", "validators"]}>
+  <Tabs.Tab>
+```bash filename="shell"
+users: https://api.securerpc.com/v1
+```
+</Tabs.Tab>
+  <Tabs.Tab>
+```bash filename="shell"
+developers: https://mainnet-relay.securerpc.com/
+```
+</Tabs.Tab>
+  <Tabs.Tab>
+```bash filename="shell"
+validators:  https://0x98650451ba02064f7b000f5768cf0cf4d4e492317d82871bdc87ef841a0743f69f0f1eea11168503240ac35d101c9135@mainnet-relay.securerpc.com
+```
+</Tabs.Tab>
+</Tabs>
+
+## Usage
+
+{/* prettier-ignore */}
+<Tabs items={["users", "developers", "validators"]}>
+  <Tabs.Tab>
+```
+export ETH_RPC_URL=https://api.securerpc.com/v1; cast block-number
+```
+</Tabs.Tab>
+  <Tabs.Tab>
+```
+export ETH_RPC_URL=https://api.securerpc.com/v1; cast block-number
+```
+</Tabs.Tab>
+  <Tabs.Tab>
+```
+❌
+```
+</Tabs.Tab>
+</Tabs>
+
+### Using the Endpoint
+
+Open `.env.local` and paste in RPC URLs for any networks that your project uses.
+
+{/* prettier-ignore */}
+```ini filename=".env.local"
+ETH_RPC_URL = "https://api.securerpc.com/v1"
+```
+
+</Steps>

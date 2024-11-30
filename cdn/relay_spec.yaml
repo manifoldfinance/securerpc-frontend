@@ -1,0 +1,2144 @@
+openapi: 3.0.3
+info:
+  title: Relay API
+  description: |
+    API specification for MEV-Boost PBS relays.
+  contact:
+    name: GitHub Repository
+    url: https://github.com/flashbots/relay-specs
+  license:
+    name: CC0-1.0
+    url: https://creativecommons.org/publicdomain/zero/1.0/
+  version: 0.0.6
+servers:
+- url: "{server_url}"
+  variables:
+    server_url:
+      description: Relay URL
+      default: http://localhost:18550
+tags:
+- name: Builder
+  description: Set of endpoints to interact with an external block builder.
+- name: Validator
+  description: Set of endpoints to interact with validator and LST registration.
+- name: Data
+  description: Set of endpoints to provide data about the relay.
+- name: Auction
+  description: Set of endpoints to provide data about the auction.
+paths:
+  /check_registration:
+    get:
+      tags:
+      - Validators
+      summary: Finds Validators by status
+      description: Used by builders to know when to submit bids for an upcoming proposal. Get a list
+      operationId: getBuilders
+      parameters:
+      - name: status
+        in: query
+        description: Status values that need to be considered for filter
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+          default: available
+          enum:
+          - available
+          - pending
+          - sold
+      responses:
+        "200":
+          description: successful operation
+          headers:
+            X-Rate-Limit:
+              description: calls per hour allowed by the user
+              style: simple
+              explode: false
+              schema:
+                type: integer
+                format: int32
+            X-Expires-After:
+              description: date in UTC when token expires
+              style: simple
+              explode: false
+              schema:
+                type: string
+                format: date-time
+          content:
+            application/json:
+              schema:
+                type: string
+        "400":
+          description: Invalid username/password supplied
+  /check_auction:
+    get:
+      tags:
+      - Auctions
+      summary: Finds Validators by status
+      description: Used by builders to know when to submit bids for an upcoming proposal. Get a list
+      operationId: getAuctions
+      parameters:
+      - name: status
+        in: query
+        description: Status values that need to be considered for filter
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+          default: available
+          enum:
+          - available
+          - pending
+          - sold
+      responses:
+        "200":
+          description: successful operation
+          headers:
+            X-Rate-Limit:
+              description: calls per hour allowed by the user
+              style: simple
+              explode: false
+              schema:
+                type: integer
+                format: int32
+            X-Expires-After:
+              description: date in UTC when token expires
+              style: simple
+              explode: false
+              schema:
+                type: string
+                format: date-time
+          content:
+            application/json:
+              schema:
+                type: string
+        "400":
+          description: Invalid username/password supplied
+  /bid_traces:
+    get:
+      tags:
+      - Auctions
+      summary: Finds Validators by status
+      description: Used by builders to know when to submit bids for an upcoming proposal. Get a list
+      operationId: getBidTraces
+      parameters:
+      - name: status
+        in: query
+        description: Status values that need to be considered for filter
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+          default: available
+          enum:
+          - available
+          - pending
+          - sold
+      responses:
+        "200":
+          description: successful operation
+          headers:
+            X-Rate-Limit:
+              description: calls per hour allowed by the user
+              style: simple
+              explode: false
+              schema:
+                type: integer
+                format: int32
+            X-Expires-After:
+              description: date in UTC when token expires
+              style: simple
+              explode: false
+              schema:
+                type: string
+                format: date-time
+          content:
+            application/json:
+              schema:
+                type: string
+        "400":
+          description: Invalid username/password supplied
+  /auction_config:
+    get:
+      tags:
+      - Auctions
+      summary: Get Auction Configuration
+      description: Used by builders to know auction config information like upcoming proposal.
+      operationId: getAuctionConfig
+      parameters:
+      - name: status
+        in: query
+        description: Status values that need to be considered for filter
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+          default: available
+          enum:
+          - available
+          - pending
+          - sold
+      responses:
+        "200":
+          description: successful operation
+          headers:
+            X-Rate-Limit:
+              description: calls per hour allowed by the user
+              style: simple
+              explode: false
+              schema:
+                type: integer
+                format: int32
+            X-Expires-After:
+              description: date in UTC when token expires
+              style: simple
+              explode: false
+              schema:
+                type: string
+                format: date-time
+          content:
+            application/json:
+              schema:
+                type: string
+        "400":
+          description: Invalid username/password supplied
+  /validator-registration:
+    post:
+      summary: Create a new validator registration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidatorRegistration'
+        required: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIResponse'
+  /signed-validator-registration:
+    post:
+      summary: Create a new signed validator registration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignedValidatorRegistration'
+        required: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIResponse'
+  /validators:
+    get:
+      tags:
+      - Builder
+      summary: |
+        Get a list of validator registrations for validators scheduled to propose
+        in the current and next epoch.
+      description: |
+        * Used by builders to know when to submit bids for an upcoming proposal.
+
+        * Returns an array of validator registrations for the current and next epoch.
+
+        * Each entry includes a slot and the validator with assigned duty.
+
+        * Slots without a registered validator are omitted.
+      operationId: getValidators
+      responses:
+        "200":
+          description: Success response.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/inline_response_200'
+  /builder_blocks:
+    post:
+      tags:
+      - Builder
+      summary: Submit a new block to the relay.
+      description: "* Blocks can be submitted as JSON or SSZ, and optionally GZIP encoded. To be\n  clear, there are four options: JSON, JSON+GZIP, SSZ, SSZ+GZIP. If JSON, the\n  content type should be `application/json`. If SSZ, the content type should\n  be `application/octet-stream`.\n\n* To enable GZIP compression for the request body, the HTTP content encoding \n  should be `gzip`. Compression is optional.\n\n* The relay will simulate the block to verify properties and proposer\n  payment in the payment transaction from builder to proposer\n  `fee_recipient` at the end of block.\n\n* For accountability, builder signature is over the SSZ encoded `message`.\n\n* The `message`, which does not include the transactions, will be made\n  public via the data API, allowing anyone to verify the builder signature.\n\n* Any new submission by a builder will overwrite a previous one by the same\n  `builder_pubkey`, even if it is less profitable.\n"
+      operationId: submitBlock
+      parameters:
+      - name: cancellations
+        in: query
+        description: "If set to 1, opt into bid cancellations."
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+          example: "1"
+      requestBody:
+        description: A signed bid with an execution payload.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/builder_blocks_body'
+            examples:
+              bellatrix:
+                value:
+                  message:
+                    slot: "1"
+                    parent_hash: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                    block_hash: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                    builder_pubkey: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+                    proposer_fee_recipient: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+                    gas_limit: "1"
+                    gas_used: "1"
+                    value: "1"
+                  execution_payload:
+                    parent_hash: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                    fee_recipient: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+                    state_root: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                    receipts_root: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                    logs_bloom: 0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+                    prev_randao: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                    block_number: "1"
+                    gas_limit: "1"
+                    gas_used: "1"
+                    timestamp: "1"
+                    extra_data: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                    base_fee_per_gas: "1"
+                    block_hash: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                    transactions:
+                    - 0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86
+                  signature: 0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505
+              capella:
+                value:
+                  message:
+                    slot: "1"
+                    parent_hash: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                    block_hash: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                    builder_pubkey: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+                    proposer_fee_recipient: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+                    gas_limit: "1"
+                    gas_used: "1"
+                    value: "1"
+                  execution_payload:
+                    parent_hash: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                    fee_recipient: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+                    state_root: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                    receipts_root: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                    logs_bloom: 0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+                    prev_randao: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                    block_number: "1"
+                    gas_limit: "1"
+                    gas_used: "1"
+                    timestamp: "1"
+                    extra_data: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                    base_fee_per_gas: "1"
+                    block_hash: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                    transactions:
+                    - 0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86
+                    withdrawals:
+                    - index: "1"
+                      validator_index: "1"
+                      address: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+                      amount: "32000000000"
+                  signature: 0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505
+              deneb:
+                value:
+                  message:
+                    slot: "1"
+                    parent_hash: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                    block_hash: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                    builder_pubkey: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+                    proposer_fee_recipient: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+                    gas_limit: "1"
+                    gas_used: "1"
+                    value: "1"
+                  execution_payload:
+                    parent_hash: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                    fee_recipient: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+                    state_root: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                    receipts_root: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                    logs_bloom: 0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+                    prev_randao: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                    block_number: "1"
+                    gas_limit: "1"
+                    gas_used: "1"
+                    timestamp: "1"
+                    extra_data: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                    base_fee_per_gas: "1"
+                    block_hash: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                    transactions:
+                    - 0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86
+                    withdrawals:
+                    - index: "1"
+                      validator_index: "1"
+                      address: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+                      amount: "32000000000"
+                  blobs_bundle:
+                    commitments:
+                    - 0x8dab030c51e16e84be9caab84ee3d0b8bbec1db4a0e4de76439da8424d9b957370a10a78851f97e4b54d2ce1ab0d686f
+                    proofs:
+                    - 0xb4021b0de10f743893d4f71e1bf830c019e832958efd6795baf2f83b8699a9eccc5dc99015d8d4d8ec370d0cc333c06a
+                    blobs:
+                    - 0x24564723180fcb3d994104538d351c8dcbde12d541676bb736cf678018ca4739
+                  signature: 0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505
+          application/octet-stream:
+            schema:
+              description: SSZ serialized request. Use content type header to indicate that SSZ data is contained in the request body.
+        required: true
+      responses:
+        "200":
+          description: Success response.
+        "400":
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_400'
+        "500":
+          description: An internal error on the relay.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_500'
+              example:
+                code: 500
+                message: internal server error
+  /proposer_payload_delivered:
+    get:
+      tags:
+      - Data
+      summary: Get payloads that were delivered to proposers.
+      description: |
+        * Payloads become available after the relay responds to a `getPayload` request from the proposer.
+
+        * Query arguments are used as filters.
+      operationId: getDeliveredPayloads
+      parameters:
+      - name: slot
+        in: query
+        description: A specific slot.
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+          example: "1"
+      - name: cursor
+        in: query
+        description: A starting slot for multiple results.
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+          example: "1"
+      - name: limit
+        in: query
+        description: The number of results.
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+          example: "1"
+      - name: block_hash
+        in: query
+        description: A specific block hash.
+        required: false
+        style: form
+        explode: true
+        schema:
+          pattern: "^0x[a-fA-F0-9]{64}$"
+          type: string
+          format: hex
+          example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+      - name: block_number
+        in: query
+        description: A specific block number.
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+          example: "1"
+      - name: proposer_pubkey
+        in: query
+        description: A specific proposer public key.
+        required: false
+        style: form
+        explode: true
+        schema:
+          pattern: "^0x[a-fA-F0-9]{96}$"
+          type: string
+          description: "The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._"
+          format: hex
+          example: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+      - name: builder_pubkey
+        in: query
+        description: A specific builder public key.
+        required: false
+        style: form
+        explode: true
+        schema:
+          pattern: "^0x[a-fA-F0-9]{96}$"
+          type: string
+          description: "The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._"
+          format: hex
+          example: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+      - name: order_by
+        in: query
+        description: Sort results in order of...
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+          description: |
+            Sort results in either ascending or descending values.
+             * `-value` - descending value (highest value first)
+             * `value` - ascending value (lowest value first)
+          enum:
+          - -value
+          - value
+      responses:
+        "200":
+          description: Success response.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  allOf:
+                  - type: object
+                    properties:
+                      slot:
+                        type: string
+                        example: "1"
+                      parent_hash:
+                        pattern: "^0x[a-fA-F0-9]{64}$"
+                        type: string
+                        format: hex
+                        example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                      block_hash:
+                        pattern: "^0x[a-fA-F0-9]{64}$"
+                        type: string
+                        format: hex
+                        example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                      builder_pubkey:
+                        pattern: "^0x[a-fA-F0-9]{96}$"
+                        type: string
+                        description: "The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._"
+                        format: hex
+                        example: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+                      proposer_pubkey:
+                        pattern: "^0x[a-fA-F0-9]{96}$"
+                        type: string
+                        description: "The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._"
+                        format: hex
+                        example: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+                      proposer_fee_recipient:
+                        pattern: "^0x[a-fA-F0-9]{40}$"
+                        type: string
+                        description: An address on the execution (Ethereum 1) network.
+                        format: hex
+                        example: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+                      gas_limit:
+                        type: string
+                        example: "1"
+                      gas_used:
+                        type: string
+                        example: "1"
+                      value:
+                        type: string
+                        example: "1"
+                  - type: object
+                    properties:
+                      block_number:
+                        type: string
+                        example: "1"
+                      num_tx:
+                        type: string
+                        example: "1"
+        "400":
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_400_1'
+        "500":
+          description: An internal error on the relay.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_500'
+              example:
+                code: 500
+                message: internal server error
+  /builder_blocks_received:
+    get:
+      tags:
+      - Data
+      summary: Get builder bid submissions.
+      description: |
+        * Returns a list of builder bids without execution payloads.
+
+        * Only submissions that were successfully verified.
+      operationId: getReceivedBids
+      parameters:
+      - name: slot
+        in: query
+        description: A specific slot.
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+          example: "1"
+      - name: block_hash
+        in: query
+        description: A specific block hash.
+        required: false
+        style: form
+        explode: true
+        schema:
+          pattern: "^0x[a-fA-F0-9]{64}$"
+          type: string
+          format: hex
+          example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+      - name: block_number
+        in: query
+        description: A specific block number.
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+          example: "1"
+      - name: builder_pubkey
+        in: query
+        description: A specific builder public key.
+        required: false
+        style: form
+        explode: true
+        schema:
+          pattern: "^0x[a-fA-F0-9]{96}$"
+          type: string
+          description: "The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._"
+          format: hex
+          example: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+      - name: limit
+        in: query
+        description: The number of results.
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+          example: "1"
+      responses:
+        "200":
+          description: Success response.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  allOf:
+                  - allOf:
+                    - type: object
+                      properties:
+                        slot:
+                          type: string
+                          example: "1"
+                        parent_hash:
+                          pattern: "^0x[a-fA-F0-9]{64}$"
+                          type: string
+                          format: hex
+                          example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                        block_hash:
+                          pattern: "^0x[a-fA-F0-9]{64}$"
+                          type: string
+                          format: hex
+                          example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                        builder_pubkey:
+                          pattern: "^0x[a-fA-F0-9]{96}$"
+                          type: string
+                          description: "The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._"
+                          format: hex
+                          example: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+                        proposer_pubkey:
+                          pattern: "^0x[a-fA-F0-9]{96}$"
+                          type: string
+                          description: "The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._"
+                          format: hex
+                          example: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+                        proposer_fee_recipient:
+                          pattern: "^0x[a-fA-F0-9]{40}$"
+                          type: string
+                          description: An address on the execution (Ethereum 1) network.
+                          format: hex
+                          example: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+                        gas_limit:
+                          type: string
+                          example: "1"
+                        gas_used:
+                          type: string
+                          example: "1"
+                        value:
+                          type: string
+                          example: "1"
+                    - type: object
+                      properties:
+                        block_number:
+                          type: string
+                          example: "1"
+                        num_tx:
+                          type: string
+                          example: "1"
+                  - type: object
+                    properties:
+                      timestamp:
+                        type: string
+                        example: "1"
+                      timestamp_ms:
+                        type: string
+                        example: "1"
+        "400":
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_400_2'
+        "500":
+          description: An internal error on the relay.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_500'
+              example:
+                code: 500
+                message: internal server error
+  /validator_registration:
+    get:
+      tags:
+      - Data
+      summary: Check that a validator is registered with the relay.
+      description: |
+        * Returns the latest validator registration for a given pubkey.
+
+        * Useful to check whether your own registration was successful.
+      operationId: getValidatorRegistration
+      parameters:
+      - name: pubkey
+        in: query
+        description: The validator's public key.
+        required: true
+        style: form
+        explode: true
+        schema:
+          pattern: "^0x[a-fA-F0-9]{96}$"
+          type: string
+          description: "The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._"
+          format: hex
+          example: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+      responses:
+        "200":
+          description: Success response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_1'
+        "400":
+          description: Error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_400_3'
+        "500":
+          description: An internal error on the relay.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_500'
+              example:
+                code: 500
+                message: internal server error
+components:
+  schemas:
+    ValidatorRegistration:
+      type: object
+      properties:
+        fee_recipient:
+          type: string
+          description: Ethereum address of the fee recipient
+          example: 0x000102030405060708090a0b0c0d0e0f10111213
+        gas_limit:
+          type: integer
+          description: Gas limit for the validator registration
+          example: 100
+        timestamp:
+          type: integer
+          description: Unix timestamp of the validator registration
+          example: 1620000000
+        pubkey:
+          type: string
+          description: Public key of the validator
+          example: 0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f
+    SignedValidatorRegistration:
+      type: object
+      properties:
+        message:
+          $ref: '#/components/schemas/ValidatorRegistration'
+        signature:
+          type: string
+          description: Signature of the validator registration
+          example: 0x606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebf
+    APIResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: Response status code
+          example: 200
+        message:
+          type: string
+          description: Response message
+          example: Success
+    Uint64:
+      type: string
+      example: "1"
+    Root:
+      pattern: "^0x[a-fA-F0-9]{64}$"
+      type: string
+      format: hex
+      example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+    Pubkey:
+      pattern: "^0x[a-fA-F0-9]{96}$"
+      type: string
+      description: "The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._"
+      format: hex
+      example: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+    ErrorMessage:
+      type: object
+      properties:
+        code:
+          type: number
+          description: Either specific error code in case of invalid request or http status code
+          example: 404
+        message:
+          type: string
+          description: Message describing error
+        stacktraces:
+          type: array
+          description: "Optional stacktraces, sent when node is in debug mode"
+          items:
+            type: string
+    OrderBy:
+      type: string
+      description: |
+        Sort results in either ascending or descending values.
+         * `-value` - descending value (highest value first)
+         * `value` - ascending value (lowest value first)
+      enum:
+      - -value
+      - value
+    Bellatrix.SubmitBlockRequest:
+      allOf:
+      - type: object
+        properties:
+          message:
+            $ref: '#/components/schemas/Bellatrix.SubmitBlockRequest_message'
+          signature:
+            pattern: "^0x[a-fA-F0-9]{192}$"
+            type: string
+            format: hex
+            example: 0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505
+      - type: object
+        properties:
+          execution_payload:
+            allOf:
+            - type: object
+              properties:
+                parent_hash:
+                  pattern: "^0x[a-fA-F0-9]{64}$"
+                  type: string
+                  format: hex
+                  example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                fee_recipient:
+                  pattern: "^0x[a-fA-F0-9]{40}$"
+                  type: string
+                  description: An address on the execution (Ethereum 1) network.
+                  format: hex
+                  example: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+                state_root:
+                  pattern: "^0x[a-fA-F0-9]{64}$"
+                  type: string
+                  format: hex
+                  example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                receipts_root:
+                  pattern: "^0x[a-fA-F0-9]{64}$"
+                  type: string
+                  format: hex
+                  example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                logs_bloom:
+                  pattern: "^0x[a-fA-F0-9]{512}$"
+                  type: string
+                  format: hex
+                  example: 0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+                prev_randao:
+                  pattern: "^0x[a-fA-F0-9]{64}$"
+                  type: string
+                  format: hex
+                  example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                block_number:
+                  type: string
+                  example: "1"
+                gas_limit:
+                  type: string
+                  example: "1"
+                gas_used:
+                  type: string
+                  example: "1"
+                timestamp:
+                  type: string
+                  example: "1"
+                extra_data:
+                  pattern: "^0x[a-fA-F0-9]{0,64}$"
+                  type: string
+                  description: Extra data on the execution (Ethereum 1) network.
+                  format: hex
+                  example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                base_fee_per_gas:
+                  type: string
+                  example: "1"
+                block_hash:
+                  pattern: "^0x[a-fA-F0-9]{64}$"
+                  type: string
+                  format: hex
+                  example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+              description: "The [`ExecutionPayload`](https://github.com/ethereum/consensus-specs/blob/v1.3.0/specs/bellatrix/beacon-chain.md#executionpayload) object from the CL Bellatrix spec."
+            - type: object
+              properties:
+                transactions:
+                  maxItems: 1048576
+                  type: array
+                  items:
+                    pattern: "^0x[a-fA-F0-9]{0,2147483648}$"
+                    type: string
+                    description: A transaction on the execution (Ethereum 1) network.
+                    format: hex
+                    example: 0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86
+    Capella.SubmitBlockRequest:
+      allOf:
+      - type: object
+        properties:
+          message:
+            $ref: Bellatrix.SubmitBlockRequest_message
+          signature:
+            pattern: "^0x[a-fA-F0-9]{192}$"
+            type: string
+            format: hex
+            example: 0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505
+      - type: object
+        properties:
+          execution_payload:
+            allOf:
+            - type: object
+              properties:
+                parent_hash:
+                  pattern: "^0x[a-fA-F0-9]{64}$"
+                  type: string
+                  format: hex
+                  example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                fee_recipient:
+                  pattern: "^0x[a-fA-F0-9]{40}$"
+                  type: string
+                  description: An address on the execution (Ethereum 1) network.
+                  format: hex
+                  example: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+                state_root:
+                  pattern: "^0x[a-fA-F0-9]{64}$"
+                  type: string
+                  format: hex
+                  example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                receipts_root:
+                  pattern: "^0x[a-fA-F0-9]{64}$"
+                  type: string
+                  format: hex
+                  example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                logs_bloom:
+                  pattern: "^0x[a-fA-F0-9]{512}$"
+                  type: string
+                  format: hex
+                  example: 0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+                prev_randao:
+                  pattern: "^0x[a-fA-F0-9]{64}$"
+                  type: string
+                  format: hex
+                  example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                block_number:
+                  type: string
+                  example: "1"
+                gas_limit:
+                  type: string
+                  example: "1"
+                gas_used:
+                  type: string
+                  example: "1"
+                timestamp:
+                  type: string
+                  example: "1"
+                extra_data:
+                  pattern: "^0x[a-fA-F0-9]{0,64}$"
+                  type: string
+                  description: Extra data on the execution (Ethereum 1) network.
+                  format: hex
+                  example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                base_fee_per_gas:
+                  type: string
+                  example: "1"
+                block_hash:
+                  pattern: "^0x[a-fA-F0-9]{64}$"
+                  type: string
+                  format: hex
+                  example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+              description: "The [`ExecutionPayload`](https://github.com/ethereum/consensus-specs/blob/v1.3.0/specs/capella/beacon-chain.md#executionpayload) object from the CL Capella spec."
+            - type: object
+              properties:
+                transactions:
+                  maxItems: 1048576
+                  type: array
+                  items:
+                    pattern: "^0x[a-fA-F0-9]{0,2147483648}$"
+                    type: string
+                    description: A transaction on the execution (Ethereum 1) network.
+                    format: hex
+                    example: 0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86
+                withdrawals:
+                  maxItems: 16
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      index:
+                        type: string
+                        description: The index of the withdrawal.
+                        example: "1"
+                      validator_index:
+                        type: string
+                        description: The index of the withdrawing validator.
+                        example: "1"
+                      address:
+                        pattern: "^0x[a-fA-F0-9]{40}$"
+                        type: string
+                        description: The address to which the withdrawal is credited.
+                        format: hex
+                        example: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+                      amount:
+                        type: string
+                        description: The value withdrawn (gwei).
+                        example: "1"
+    Deneb.SubmitBlockRequest:
+      allOf:
+      - type: object
+        properties:
+          message:
+            $ref: Bellatrix.SubmitBlockRequest_message
+          signature:
+            pattern: "^0x[a-fA-F0-9]{192}$"
+            type: string
+            format: hex
+            example: 0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505
+      - type: object
+        properties:
+          execution_payload:
+            allOf:
+            - type: object
+              properties:
+                parent_hash:
+                  pattern: "^0x[a-fA-F0-9]{64}$"
+                  type: string
+                  format: hex
+                  example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                fee_recipient:
+                  pattern: "^0x[a-fA-F0-9]{40}$"
+                  type: string
+                  description: An address on the execution (Ethereum 1) network.
+                  format: hex
+                  example: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+                state_root:
+                  pattern: "^0x[a-fA-F0-9]{64}$"
+                  type: string
+                  format: hex
+                  example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                receipts_root:
+                  pattern: "^0x[a-fA-F0-9]{64}$"
+                  type: string
+                  format: hex
+                  example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                logs_bloom:
+                  pattern: "^0x[a-fA-F0-9]{512}$"
+                  type: string
+                  format: hex
+                  example: 0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+                prev_randao:
+                  pattern: "^0x[a-fA-F0-9]{64}$"
+                  type: string
+                  format: hex
+                  example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                block_number:
+                  type: string
+                  example: "1"
+                gas_limit:
+                  type: string
+                  example: "1"
+                gas_used:
+                  type: string
+                  example: "1"
+                timestamp:
+                  type: string
+                  example: "1"
+                extra_data:
+                  pattern: "^0x[a-fA-F0-9]{0,64}$"
+                  type: string
+                  description: Extra data on the execution (Ethereum 1) network.
+                  format: hex
+                  example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                base_fee_per_gas:
+                  type: string
+                  example: "1"
+                excess_data_gas:
+                  type: string
+                  example: "1"
+                block_hash:
+                  pattern: "^0x[a-fA-F0-9]{64}$"
+                  type: string
+                  format: hex
+                  example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+              description: "The [`ExecutionPayload`](https://github.com/ethereum/consensus-specs/blob/master/specs/deneb/beacon-chain.md#executionpayload) object from the CL Deneb spec."
+            - type: object
+              properties:
+                transactions:
+                  maxItems: 1048576
+                  type: array
+                  items:
+                    pattern: "^0x[a-fA-F0-9]{0,2147483648}$"
+                    type: string
+                    description: A transaction on the execution (Ethereum 1) network.
+                    format: hex
+                    example: 0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86
+                withdrawals:
+                  maxItems: 16
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      index:
+                        type: string
+                        description: The index of the withdrawal.
+                        example: "1"
+                      validator_index:
+                        type: string
+                        description: The index of the withdrawing validator.
+                        example: "1"
+                      address:
+                        pattern: "^0x[a-fA-F0-9]{40}$"
+                        type: string
+                        description: The address to which the withdrawal is credited.
+                        format: hex
+                        example: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+                      amount:
+                        type: string
+                        description: The value withdrawn (gwei).
+                        example: "1"
+          blobs_bundle:
+            $ref: '#/components/schemas/Deneb.SubmitBlockRequest_blobs_bundle'
+        description: A wrapper object containing the ExecutionPayload and the BlobsBundle
+    ValidatorsResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/ValidatorsResponse_inner'
+    DeliveredPayloadsResponse:
+      type: array
+      items:
+        allOf:
+        - type: object
+          properties:
+            slot:
+              type: string
+              example: "1"
+            parent_hash:
+              pattern: "^0x[a-fA-F0-9]{64}$"
+              type: string
+              format: hex
+              example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+            block_hash:
+              pattern: "^0x[a-fA-F0-9]{64}$"
+              type: string
+              format: hex
+              example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+            builder_pubkey:
+              pattern: "^0x[a-fA-F0-9]{96}$"
+              type: string
+              description: "The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._"
+              format: hex
+              example: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+            proposer_pubkey:
+              pattern: "^0x[a-fA-F0-9]{96}$"
+              type: string
+              description: "The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._"
+              format: hex
+              example: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+            proposer_fee_recipient:
+              pattern: "^0x[a-fA-F0-9]{40}$"
+              type: string
+              description: An address on the execution (Ethereum 1) network.
+              format: hex
+              example: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+            gas_limit:
+              type: string
+              example: "1"
+            gas_used:
+              type: string
+              example: "1"
+            value:
+              type: string
+              example: "1"
+        - type: object
+          properties:
+            block_number:
+              type: string
+              example: "1"
+            num_tx:
+              type: string
+              example: "1"
+    ReceivedBlocksResponse:
+      type: array
+      items:
+        allOf:
+        - allOf:
+          - type: object
+            properties:
+              slot:
+                type: string
+                example: "1"
+              parent_hash:
+                pattern: "^0x[a-fA-F0-9]{64}$"
+                type: string
+                format: hex
+                example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+              block_hash:
+                pattern: "^0x[a-fA-F0-9]{64}$"
+                type: string
+                format: hex
+                example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+              builder_pubkey:
+                pattern: "^0x[a-fA-F0-9]{96}$"
+                type: string
+                description: "The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._"
+                format: hex
+                example: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+              proposer_pubkey:
+                pattern: "^0x[a-fA-F0-9]{96}$"
+                type: string
+                description: "The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._"
+                format: hex
+                example: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+              proposer_fee_recipient:
+                pattern: "^0x[a-fA-F0-9]{40}$"
+                type: string
+                description: An address on the execution (Ethereum 1) network.
+                format: hex
+                example: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+              gas_limit:
+                type: string
+                example: "1"
+              gas_used:
+                type: string
+                example: "1"
+              value:
+                type: string
+                example: "1"
+          - type: object
+            properties:
+              block_number:
+                type: string
+                example: "1"
+              num_tx:
+                type: string
+                example: "1"
+        - type: object
+          properties:
+            timestamp:
+              type: string
+              example: "1"
+            timestamp_ms:
+              type: string
+              example: "1"
+    validators_entry_message:
+      type: object
+      properties:
+        fee_recipient:
+          pattern: "^0x[a-fA-F0-9]{40}$"
+          type: string
+          description: Address to receive fees from the block.
+          format: hex
+          example: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+        gas_limit:
+          type: string
+          description: Preferred gas limit of validator.
+          example: "1"
+        timestamp:
+          type: string
+          description: Unix timestamp of registration.
+          example: "1"
+        pubkey:
+          pattern: "^0x[a-fA-F0-9]{96}$"
+          type: string
+          description: BLS public key of validator.
+          format: hex
+          example: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+      description: The `ValidatorRegistration` object from the Builder API specification.
+    validators_entry:
+      type: object
+      properties:
+        message:
+          $ref: '#/components/schemas/validators_entry_message'
+        signature:
+          pattern: "^0x[a-fA-F0-9]{192}$"
+          type: string
+          format: hex
+          example: 0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505
+      description: The `SignedValidatorRegistration` object from the Builder API specification.
+    inline_response_200:
+      type: object
+      properties:
+        slot:
+          type: string
+          example: "1"
+        validator_index:
+          type: string
+          example: "1"
+        entry:
+          $ref: '#/components/schemas/validators_entry'
+    builder_blocks_body:
+      oneOf:
+      - allOf:
+        - type: object
+          properties:
+            message:
+              type: object
+              properties:
+                slot:
+                  type: string
+                  example: "1"
+                parent_hash:
+                  pattern: "^0x[a-fA-F0-9]{64}$"
+                  type: string
+                  format: hex
+                  example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                block_hash:
+                  pattern: "^0x[a-fA-F0-9]{64}$"
+                  type: string
+                  format: hex
+                  example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                builder_pubkey:
+                  pattern: "^0x[a-fA-F0-9]{96}$"
+                  type: string
+                  description: "The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._"
+                  format: hex
+                  example: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+                proposer_pubkey:
+                  pattern: "^0x[a-fA-F0-9]{96}$"
+                  type: string
+                  description: "The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._"
+                  format: hex
+                  example: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+                proposer_fee_recipient:
+                  pattern: "^0x[a-fA-F0-9]{40}$"
+                  type: string
+                  description: An address on the execution (Ethereum 1) network.
+                  format: hex
+                  example: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+                gas_limit:
+                  type: string
+                  example: "1"
+                gas_used:
+                  type: string
+                  example: "1"
+                value:
+                  type: string
+                  example: "1"
+            signature:
+              pattern: "^0x[a-fA-F0-9]{192}$"
+              type: string
+              format: hex
+              example: 0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505
+        - type: object
+          properties:
+            execution_payload:
+              allOf:
+              - type: object
+                properties:
+                  parent_hash:
+                    pattern: "^0x[a-fA-F0-9]{64}$"
+                    type: string
+                    format: hex
+                    example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                  fee_recipient:
+                    pattern: "^0x[a-fA-F0-9]{40}$"
+                    type: string
+                    description: An address on the execution (Ethereum 1) network.
+                    format: hex
+                    example: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+                  state_root:
+                    pattern: "^0x[a-fA-F0-9]{64}$"
+                    type: string
+                    format: hex
+                    example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                  receipts_root:
+                    pattern: "^0x[a-fA-F0-9]{64}$"
+                    type: string
+                    format: hex
+                    example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                  logs_bloom:
+                    pattern: "^0x[a-fA-F0-9]{512}$"
+                    type: string
+                    format: hex
+                    example: 0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+                  prev_randao:
+                    pattern: "^0x[a-fA-F0-9]{64}$"
+                    type: string
+                    format: hex
+                    example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                  block_number:
+                    type: string
+                    example: "1"
+                  gas_limit:
+                    type: string
+                    example: "1"
+                  gas_used:
+                    type: string
+                    example: "1"
+                  timestamp:
+                    type: string
+                    example: "1"
+                  extra_data:
+                    pattern: "^0x[a-fA-F0-9]{0,64}$"
+                    type: string
+                    description: Extra data on the execution (Ethereum 1) network.
+                    format: hex
+                    example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                  base_fee_per_gas:
+                    type: string
+                    example: "1"
+                  block_hash:
+                    pattern: "^0x[a-fA-F0-9]{64}$"
+                    type: string
+                    format: hex
+                    example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                description: "The [`ExecutionPayload`](https://github.com/ethereum/consensus-specs/blob/v1.3.0/specs/bellatrix/beacon-chain.md#executionpayload) object from the CL Bellatrix spec."
+              - type: object
+                properties:
+                  transactions:
+                    maxItems: 1048576
+                    type: array
+                    items:
+                      pattern: "^0x[a-fA-F0-9]{0,2147483648}$"
+                      type: string
+                      description: A transaction on the execution (Ethereum 1) network.
+                      format: hex
+                      example: 0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86
+      - allOf:
+        - type: object
+          properties:
+            message:
+              type: object
+              properties:
+                slot:
+                  type: string
+                  example: "1"
+                parent_hash:
+                  pattern: "^0x[a-fA-F0-9]{64}$"
+                  type: string
+                  format: hex
+                  example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                block_hash:
+                  pattern: "^0x[a-fA-F0-9]{64}$"
+                  type: string
+                  format: hex
+                  example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                builder_pubkey:
+                  pattern: "^0x[a-fA-F0-9]{96}$"
+                  type: string
+                  description: "The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._"
+                  format: hex
+                  example: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+                proposer_pubkey:
+                  pattern: "^0x[a-fA-F0-9]{96}$"
+                  type: string
+                  description: "The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._"
+                  format: hex
+                  example: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+                proposer_fee_recipient:
+                  pattern: "^0x[a-fA-F0-9]{40}$"
+                  type: string
+                  description: An address on the execution (Ethereum 1) network.
+                  format: hex
+                  example: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+                gas_limit:
+                  type: string
+                  example: "1"
+                gas_used:
+                  type: string
+                  example: "1"
+                value:
+                  type: string
+                  example: "1"
+            signature:
+              pattern: "^0x[a-fA-F0-9]{192}$"
+              type: string
+              format: hex
+              example: 0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505
+        - type: object
+          properties:
+            execution_payload:
+              allOf:
+              - type: object
+                properties:
+                  parent_hash:
+                    pattern: "^0x[a-fA-F0-9]{64}$"
+                    type: string
+                    format: hex
+                    example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                  fee_recipient:
+                    pattern: "^0x[a-fA-F0-9]{40}$"
+                    type: string
+                    description: An address on the execution (Ethereum 1) network.
+                    format: hex
+                    example: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+                  state_root:
+                    pattern: "^0x[a-fA-F0-9]{64}$"
+                    type: string
+                    format: hex
+                    example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                  receipts_root:
+                    pattern: "^0x[a-fA-F0-9]{64}$"
+                    type: string
+                    format: hex
+                    example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                  logs_bloom:
+                    pattern: "^0x[a-fA-F0-9]{512}$"
+                    type: string
+                    format: hex
+                    example: 0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+                  prev_randao:
+                    pattern: "^0x[a-fA-F0-9]{64}$"
+                    type: string
+                    format: hex
+                    example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                  block_number:
+                    type: string
+                    example: "1"
+                  gas_limit:
+                    type: string
+                    example: "1"
+                  gas_used:
+                    type: string
+                    example: "1"
+                  timestamp:
+                    type: string
+                    example: "1"
+                  extra_data:
+                    pattern: "^0x[a-fA-F0-9]{0,64}$"
+                    type: string
+                    description: Extra data on the execution (Ethereum 1) network.
+                    format: hex
+                    example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                  base_fee_per_gas:
+                    type: string
+                    example: "1"
+                  block_hash:
+                    pattern: "^0x[a-fA-F0-9]{64}$"
+                    type: string
+                    format: hex
+                    example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                description: "The [`ExecutionPayload`](https://github.com/ethereum/consensus-specs/blob/v1.3.0/specs/capella/beacon-chain.md#executionpayload) object from the CL Capella spec."
+              - type: object
+                properties:
+                  transactions:
+                    maxItems: 1048576
+                    type: array
+                    items:
+                      pattern: "^0x[a-fA-F0-9]{0,2147483648}$"
+                      type: string
+                      description: A transaction on the execution (Ethereum 1) network.
+                      format: hex
+                      example: 0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86
+                  withdrawals:
+                    maxItems: 16
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        index:
+                          type: string
+                          description: The index of the withdrawal.
+                          example: "1"
+                        validator_index:
+                          type: string
+                          description: The index of the withdrawing validator.
+                          example: "1"
+                        address:
+                          pattern: "^0x[a-fA-F0-9]{40}$"
+                          type: string
+                          description: The address to which the withdrawal is credited.
+                          format: hex
+                          example: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+                        amount:
+                          type: string
+                          description: The value withdrawn (gwei).
+                          example: "1"
+      - allOf:
+        - type: object
+          properties:
+            message:
+              type: object
+              properties:
+                slot:
+                  type: string
+                  example: "1"
+                parent_hash:
+                  pattern: "^0x[a-fA-F0-9]{64}$"
+                  type: string
+                  format: hex
+                  example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                block_hash:
+                  pattern: "^0x[a-fA-F0-9]{64}$"
+                  type: string
+                  format: hex
+                  example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                builder_pubkey:
+                  pattern: "^0x[a-fA-F0-9]{96}$"
+                  type: string
+                  description: "The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._"
+                  format: hex
+                  example: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+                proposer_pubkey:
+                  pattern: "^0x[a-fA-F0-9]{96}$"
+                  type: string
+                  description: "The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._"
+                  format: hex
+                  example: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+                proposer_fee_recipient:
+                  pattern: "^0x[a-fA-F0-9]{40}$"
+                  type: string
+                  description: An address on the execution (Ethereum 1) network.
+                  format: hex
+                  example: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+                gas_limit:
+                  type: string
+                  example: "1"
+                gas_used:
+                  type: string
+                  example: "1"
+                value:
+                  type: string
+                  example: "1"
+            signature:
+              pattern: "^0x[a-fA-F0-9]{192}$"
+              type: string
+              format: hex
+              example: 0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505
+        - type: object
+          properties:
+            execution_payload:
+              allOf:
+              - type: object
+                properties:
+                  parent_hash:
+                    pattern: "^0x[a-fA-F0-9]{64}$"
+                    type: string
+                    format: hex
+                    example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                  fee_recipient:
+                    pattern: "^0x[a-fA-F0-9]{40}$"
+                    type: string
+                    description: An address on the execution (Ethereum 1) network.
+                    format: hex
+                    example: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+                  state_root:
+                    pattern: "^0x[a-fA-F0-9]{64}$"
+                    type: string
+                    format: hex
+                    example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                  receipts_root:
+                    pattern: "^0x[a-fA-F0-9]{64}$"
+                    type: string
+                    format: hex
+                    example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                  logs_bloom:
+                    pattern: "^0x[a-fA-F0-9]{512}$"
+                    type: string
+                    format: hex
+                    example: 0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+                  prev_randao:
+                    pattern: "^0x[a-fA-F0-9]{64}$"
+                    type: string
+                    format: hex
+                    example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                  block_number:
+                    type: string
+                    example: "1"
+                  gas_limit:
+                    type: string
+                    example: "1"
+                  gas_used:
+                    type: string
+                    example: "1"
+                  timestamp:
+                    type: string
+                    example: "1"
+                  extra_data:
+                    pattern: "^0x[a-fA-F0-9]{0,64}$"
+                    type: string
+                    description: Extra data on the execution (Ethereum 1) network.
+                    format: hex
+                    example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                  base_fee_per_gas:
+                    type: string
+                    example: "1"
+                  excess_data_gas:
+                    type: string
+                    example: "1"
+                  block_hash:
+                    pattern: "^0x[a-fA-F0-9]{64}$"
+                    type: string
+                    format: hex
+                    example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+                description: "The [`ExecutionPayload`](https://github.com/ethereum/consensus-specs/blob/master/specs/deneb/beacon-chain.md#executionpayload) object from the CL Deneb spec."
+              - type: object
+                properties:
+                  transactions:
+                    maxItems: 1048576
+                    type: array
+                    items:
+                      pattern: "^0x[a-fA-F0-9]{0,2147483648}$"
+                      type: string
+                      description: A transaction on the execution (Ethereum 1) network.
+                      format: hex
+                      example: 0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86
+                  withdrawals:
+                    maxItems: 16
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        index:
+                          type: string
+                          description: The index of the withdrawal.
+                          example: "1"
+                        validator_index:
+                          type: string
+                          description: The index of the withdrawing validator.
+                          example: "1"
+                        address:
+                          pattern: "^0x[a-fA-F0-9]{40}$"
+                          type: string
+                          description: The address to which the withdrawal is credited.
+                          format: hex
+                          example: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+                        amount:
+                          type: string
+                          description: The value withdrawn (gwei).
+                          example: "1"
+            blobs_bundle:
+              type: object
+              properties:
+                blobs:
+                  maxItems: 6
+                  minItems: 0
+                  type: array
+                  items:
+                    pattern: "^0x[a-fA-F0-9]{262144}$"
+                    type: string
+                    description: A blob is `FIELD_ELEMENTS_PER_BLOB * size_of(BLSFieldElement) = 4096 * 32 = 131072` bytes (`DATA`) representing a SSZ-encoded Blob as defined in Deneb
+                    format: hex
+              description: The `BlobsBundle` object from the CL Deneb spec
+              allOf:
+              - type: object
+                properties:
+                  commitments:
+                    maxItems: 6
+                    minItems: 0
+                    type: array
+                    items:
+                      pattern: "^0x[a-fA-F0-9]{96}$"
+                      type: string
+                      description: A G1 curve point. Same as BLS standard "is valid pubkey" check but also allows `0x00..00` for point-at-infinity
+                      format: hex
+                      example: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+                  proofs:
+                    maxItems: 6
+                    minItems: 0
+                    type: array
+                    items:
+                      pattern: "^0x[a-fA-F0-9]{96}$"
+                      type: string
+                      description: A G1 curve point. Used for verifying that the `KZGCommitment` for a given `Blob` is correct.
+                      format: hex
+          description: A wrapper object containing the ExecutionPayload and the BlobsBundle
+    inline_response_400:
+      allOf:
+      - type: object
+        properties:
+          code:
+            type: number
+            description: Either specific error code in case of invalid request or http status code
+            example: 404
+          message:
+            type: string
+            description: Message describing error
+          stacktraces:
+            type: array
+            description: "Optional stacktraces, sent when node is in debug mode"
+            items:
+              type: string
+      - example:
+          code: 400
+          message: payload for this slot was already delivered
+    inline_response_500:
+      type: object
+      properties:
+        code:
+          type: number
+          description: Either specific error code in case of invalid request or http status code
+          example: 404
+        message:
+          type: string
+          description: Message describing error
+        stacktraces:
+          type: array
+          description: "Optional stacktraces, sent when node is in debug mode"
+          items:
+            type: string
+    inline_response_400_1:
+      allOf:
+      - type: object
+        properties:
+          code:
+            type: number
+            description: Either specific error code in case of invalid request or http status code
+            example: 404
+          message:
+            type: string
+            description: Message describing error
+          stacktraces:
+            type: array
+            description: "Optional stacktraces, sent when node is in debug mode"
+            items:
+              type: string
+      - example:
+          code: 400
+          message: invalid block_hash argument
+    inline_response_400_2:
+      allOf:
+      - type: object
+        properties:
+          code:
+            type: number
+            description: Either specific error code in case of invalid request or http status code
+            example: 404
+          message:
+            type: string
+            description: Message describing error
+          stacktraces:
+            type: array
+            description: "Optional stacktraces, sent when node is in debug mode"
+            items:
+              type: string
+      - example:
+          code: 400
+          message: cannot specify both slot and cursor
+    inline_response_200_1:
+      type: object
+      properties:
+        message:
+          $ref: '#/components/schemas/validators_entry_message'
+        signature:
+          pattern: "^0x[a-fA-F0-9]{192}$"
+          type: string
+          format: hex
+          example: 0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505
+      description: The `SignedValidatorRegistration` object from the Builder API specification.
+    inline_response_400_3:
+      allOf:
+      - type: object
+        properties:
+          code:
+            type: number
+            description: Either specific error code in case of invalid request or http status code
+            example: 404
+          message:
+            type: string
+            description: Message describing error
+          stacktraces:
+            type: array
+            description: "Optional stacktraces, sent when node is in debug mode"
+            items:
+              type: string
+      - example:
+          code: 400
+          message: missing pubkey argument
+    Bellatrix.SubmitBlockRequest_message:
+      type: object
+      properties:
+        slot:
+          type: string
+          example: "1"
+        parent_hash:
+          pattern: "^0x[a-fA-F0-9]{64}$"
+          type: string
+          format: hex
+          example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+        block_hash:
+          pattern: "^0x[a-fA-F0-9]{64}$"
+          type: string
+          format: hex
+          example: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+        builder_pubkey:
+          pattern: "^0x[a-fA-F0-9]{96}$"
+          type: string
+          description: "The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._"
+          format: hex
+          example: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+        proposer_pubkey:
+          pattern: "^0x[a-fA-F0-9]{96}$"
+          type: string
+          description: "The validator's BLS public key, uniquely identifying them. _48-bytes, hex encoded with 0x prefix, case insensitive._"
+          format: hex
+          example: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+        proposer_fee_recipient:
+          pattern: "^0x[a-fA-F0-9]{40}$"
+          type: string
+          description: An address on the execution (Ethereum 1) network.
+          format: hex
+          example: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+        gas_limit:
+          type: string
+          example: "1"
+        gas_used:
+          type: string
+          example: "1"
+        value:
+          type: string
+          example: "1"
+    Deneb.SubmitBlockRequest_blobs_bundle:
+      type: object
+      properties:
+        blobs:
+          maxItems: 6
+          minItems: 0
+          type: array
+          items:
+            pattern: "^0x[a-fA-F0-9]{262144}$"
+            type: string
+            description: A blob is `FIELD_ELEMENTS_PER_BLOB * size_of(BLSFieldElement) = 4096 * 32 = 131072` bytes (`DATA`) representing a SSZ-encoded Blob as defined in Deneb
+            format: hex
+      description: The `BlobsBundle` object from the CL Deneb spec
+      allOf:
+      - type: object
+        properties:
+          commitments:
+            maxItems: 6
+            minItems: 0
+            type: array
+            items:
+              pattern: "^0x[a-fA-F0-9]{96}$"
+              type: string
+              description: A G1 curve point. Same as BLS standard "is valid pubkey" check but also allows `0x00..00` for point-at-infinity
+              format: hex
+              example: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+          proofs:
+            maxItems: 6
+            minItems: 0
+            type: array
+            items:
+              pattern: "^0x[a-fA-F0-9]{96}$"
+              type: string
+              description: A G1 curve point. Used for verifying that the `KZGCommitment` for a given `Blob` is correct.
+              format: hex
+    ValidatorsResponse_inner:
+      type: object
+      properties:
+        slot:
+          type: string
+          example: "1"
+        validator_index:
+          type: string
+          example: "1"
+        entry:
+          type: object
+          properties:
+            message:
+              type: object
+              properties:
+                fee_recipient:
+                  pattern: "^0x[a-fA-F0-9]{40}$"
+                  type: string
+                  description: Address to receive fees from the block.
+                  format: hex
+                  example: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+                gas_limit:
+                  type: string
+                  description: Preferred gas limit of validator.
+                  example: "1"
+                timestamp:
+                  type: string
+                  description: Unix timestamp of registration.
+                  example: "1"
+                pubkey:
+                  pattern: "^0x[a-fA-F0-9]{96}$"
+                  type: string
+                  description: BLS public key of validator.
+                  format: hex
+                  example: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+              description: The `ValidatorRegistration` object from the Builder API specification.
+            signature:
+              pattern: "^0x[a-fA-F0-9]{192}$"
+              type: string
+              format: hex
+              example: 0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505
+          description: The `SignedValidatorRegistration` object from the Builder API specification.
+  responses:
+    InternalError:
+      description: An internal error on the relay.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: number
+                description: Either specific error code in case of invalid request or http status code
+                example: 404
+              message:
+                type: string
+                description: Message describing error
+              stacktraces:
+                type: array
+                description: "Optional stacktraces, sent when node is in debug mode"
+                items:
+                  type: string
+          example:
+            code: 500
+            message: internal server error
+  examples:
+    Bellatrix.SubmitBlockRequest:
+      value:
+        message:
+          slot: "1"
+          parent_hash: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+          block_hash: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+          builder_pubkey: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+          proposer_fee_recipient: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+          gas_limit: "1"
+          gas_used: "1"
+          value: "1"
+        execution_payload:
+          parent_hash: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+          fee_recipient: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+          state_root: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+          receipts_root: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+          logs_bloom: 0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+          prev_randao: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+          block_number: "1"
+          gas_limit: "1"
+          gas_used: "1"
+          timestamp: "1"
+          extra_data: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+          base_fee_per_gas: "1"
+          block_hash: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+          transactions:
+          - 0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86
+        signature: 0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505
+    Capella.SubmitBlockRequest:
+      value:
+        message:
+          slot: "1"
+          parent_hash: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+          block_hash: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+          builder_pubkey: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+          proposer_fee_recipient: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+          gas_limit: "1"
+          gas_used: "1"
+          value: "1"
+        execution_payload:
+          parent_hash: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+          fee_recipient: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+          state_root: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+          receipts_root: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+          logs_bloom: 0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+          prev_randao: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+          block_number: "1"
+          gas_limit: "1"
+          gas_used: "1"
+          timestamp: "1"
+          extra_data: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+          base_fee_per_gas: "1"
+          block_hash: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+          transactions:
+          - 0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86
+          withdrawals:
+          - index: "1"
+            validator_index: "1"
+            address: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+            amount: "32000000000"
+        signature: 0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505
+    Deneb.SubmitBlockRequest:
+      value:
+        message:
+          slot: "1"
+          parent_hash: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+          block_hash: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+          builder_pubkey: 0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a
+          proposer_fee_recipient: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+          gas_limit: "1"
+          gas_used: "1"
+          value: "1"
+        execution_payload:
+          parent_hash: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+          fee_recipient: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+          state_root: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+          receipts_root: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+          logs_bloom: 0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+          prev_randao: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+          block_number: "1"
+          gas_limit: "1"
+          gas_used: "1"
+          timestamp: "1"
+          extra_data: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+          base_fee_per_gas: "1"
+          block_hash: 0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2
+          transactions:
+          - 0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86
+          withdrawals:
+          - index: "1"
+            validator_index: "1"
+            address: 0xabcf8e0d4e9587369b2301d0790347320302cc09
+            amount: "32000000000"
+        blobs_bundle:
+          commitments:
+          - 0x8dab030c51e16e84be9caab84ee3d0b8bbec1db4a0e4de76439da8424d9b957370a10a78851f97e4b54d2ce1ab0d686f
+          proofs:
+          - 0xb4021b0de10f743893d4f71e1bf830c019e832958efd6795baf2f83b8699a9eccc5dc99015d8d4d8ec370d0cc333c06a
+          blobs:
+          - 0x24564723180fcb3d994104538d351c8dcbde12d541676bb736cf678018ca4739
+        signature: 0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505

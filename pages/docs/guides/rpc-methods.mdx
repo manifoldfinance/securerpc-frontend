@@ -1,0 +1,33 @@
+---
+title: 'RPC Methods'
+description: 'RPC Methods and support for preconfirmations'
+---
+
+import { Callout, FileTree, Steps } from 'nextra/components';
+
+
+## Performance
+
+We specify multiple SLO targets:
+
+- 90% of GET RPC calls will complete in < 1ms
+- 99% of GET RPC calls will complete in < 10ms
+- 99.9% of GET RPC calls will complete in < 100ms
+
+We also define separate objective for different workloads:
+
+- 95% of clients A (A care about bulk processing) SET RPC calls will complete in < 1s
+- 99% of clients B (B cares about latency) SET RPC calls with payload < 1kb will complete in < 10ms
+
+
+### Preconfirmation RPC Responses
+
+|    result     | response includes transaction hash |                                                                          description                                                                           |
+| :-----------: | :-------------------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+|   not_found   |                  false                  |               the operation hash is not known to the bundler or has been <br /> rejected during validation and has never entered the <br /> mempool                |
+| not_submitted |                  false                  |               the operation hash is known to the bundler but is sitting in <br /> the mempool and has not been bundled into a transaction <br /> yet               |
+|   submitted   |                  true                   |              the operation hash is known to the bundler, has been <br /> bundled into a transaction which is currently pending in the <br /> mempool               |
+|   rejected    |                  false                  | the operation hash has entered the mempool but as it was <br /> being bundled into a bundle transaction the re-simulation <br /> failed and it was never submitted |
+|   included    |                  true                   |                                         the operation hash is known to the bundler and has been <br /> included on-chain                                         |
+|    failed     |                  true                   |      the operation hash is known to the bundler and the <br /> transaction bundling it has been included on-chain but the <br /> bundle transaction reverted       |
+|    queued     |                  false                  |        the operation hash is known to the bundler but is waiting in a <br /> queue before being sent to the mempool due to its nonce <br /> being too high         |
