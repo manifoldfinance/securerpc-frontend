@@ -1,9 +1,12 @@
-const path = require('path')
-const fs = require('fs')
-const fetch = require('node-fetch')
+import path from 'path';
+import fs from 'fs';
+import fetch from 'node-fetch';
 
 // @note this should be `NEXT_PUBLIC_COMMIT_SHA` for nextjs
 const commit = process.env.COMMIT_SHA
+
+const github_org = 'manifoldfinacne'
+const github_repo = 'securerpc-frontend'
 
 async function getCommit() {
   if (!commit) return `No COMMIT_SHA environment variable set.`
@@ -30,7 +33,7 @@ async function go() {
   }
 
   // @note this is different for nextjs, should be in dir: `.next/~`
-  fs.writeFileSync(path.join(__dirname, '../public/build/info.json'), JSON.stringify(buildInfo, null, 2))
+  fs.writeFileSync(path.join('.next/build-manifest.json'), JSON.stringify(buildInfo, null, 2))
   console.log('build info generated', buildInfo)
 }
 go()

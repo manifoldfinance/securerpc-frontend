@@ -60,7 +60,7 @@ const config: DocsThemeConfig = {
     hue: { dark: 186, light: 186 },
     saturation: { dark: 86, light: 86 },
   },
-  docsRepositoryBase: 'https://github.com/manifoldfinance/securerpc-site/tree/master/docs',
+  docsRepositoryBase: 'https://github.com/manifoldfinance/securerpc-frontend/tree/master/docs',
   sidebar: {
     defaultMenuCollapseLevel: 2,
     toggleButton: true
