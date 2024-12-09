@@ -7,6 +7,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/ca
 import { cn } from '@/lib/utils';
 import { Globe } from './globe';
 import { CommandLineIcon, CursorArrowRaysIcon, ServerStackIcon, ShieldCheckIcon } from './icons';
+import { ApiStatus } from './ApiStatus';
 
 const stats = [
   { id: 1, name: 'Transactions every 24 hours', value: '$44 million' },
@@ -122,6 +123,8 @@ export function Home() {
             </CardHeader>
           </Card>
         </div>
+
+        <ApiStatus apiUrl="https://api.securerpc.com/v1" status="normal" />
 
         <Benchmarks />
       </div>

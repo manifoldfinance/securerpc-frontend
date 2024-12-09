@@ -19,9 +19,9 @@ const config: DocsThemeConfig = {
     key: '3.0-release',
     content: (
       <div className='before:content-["🎉_"]'>
-        Nextra 3.0 is released.{' '}
+        SecureRPC 3.0 is out!{' '}
         <Link
-          href="https://forums.manifo"
+          href="https://forums.manifoldfinance.com"
           className='after:content-["_→"]'
         >
           Read more
